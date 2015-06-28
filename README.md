@@ -140,6 +140,11 @@ Actually, this functions work exactly the same as their command-like function, j
   ```
 
 
+Now, let's see the callback functions that are not text.
+
+- `AnyMsgFn(func(TgBot, Message))`
+  This functions will be called in every message, be careful!
+
 ## Doing actions!
 
 So, you know how to get your functions call when something arrives, but how can you answer? That's really important! If the bot can't answer, then you don't have a bot! So, let's talk about the action functions availables in TgBot
@@ -296,7 +301,7 @@ func testGoroutineHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string 
 
 func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	keylayout := [][]string{{}}
-	for k, _ := range availableCommands {
+	for k := range availableCommands {
 		if len(strings.Split(k, " ")) == 1 {
 			if len(keylayout[len(keylayout)-1]) == 2 {
 				keylayout = append(keylayout, []string{k})
@@ -314,6 +319,11 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	return nil
 }
 
+func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
+	// uncomment this to see it :)
+	// bot.SimpleSendMessage(msg, "Received message!")
+}
+
 func main() {
 	bot := tgbot.NewTgBot(token).
 		SimpleCommandFn(`^/sleep$`, testGoroutineHand).
@@ -324,11 +334,22 @@ func main() {
 		CommandFn(`^/hardecho (.+)`, hardEcho).
 		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
-		RegexFn(`^Tell me (.+)$`, tellmeHand)
+		RegexFn(`^Tell me (.+)$`, tellmeHand).
+		AnyMsgFn(allMsgHand)
 
+	// bot := tgbot.NewTgBot(token)
+	// bot.SimpleCommandFn(`^/sleep$`, testGoroutineHand)
+	// bot.SimpleCommandFn(`^/keyboard$`, cmdKeyboard)
+	// bot.SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard)
+	// bot.SimpleCommandFn(`^/forwardme$`, forwardHand)
+	// bot.SimpleCommandFn(`^/showmecommands`, showMeHand)
+	// bot.CommandFn(`^/hardecho (.+)`, hardEcho)
+	// bot.MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand)
+	// bot.SimpleRegexFn(`^Hello!$`, helloHand)
+	// bot.RegexFn(`^Tell me (.+)$`, tellmeHand)
+	// bot.AnyMsgFn(allMsgHand)
 	bot.SimpleStart()
 }
-
 ```
 
 If you want to handle the message by yourself, you can too, you will have to add a channel to the listener and start it.

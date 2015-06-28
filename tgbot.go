@@ -182,7 +182,7 @@ func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *s
 	return bot
 }
 
-// MultiCommandFn
+// MultiCommandFn ...
 func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	rc := []*regexp.Regexp{}
 	for _, p := range paths {
@@ -269,6 +269,7 @@ func (bot TgBot) ProcessTextMsg(msg Message, text string) {
 	}
 }
 
+// SendAllFunctions ...
 func (bot TgBot) SendAllFunctions(msg Message) {
 	for _, v := range bot.AllMsgFuncs {
 		go v(bot, msg)
