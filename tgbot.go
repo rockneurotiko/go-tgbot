@@ -22,7 +22,8 @@ func NewTgBot(token string) TgBot {
 		Token:          token,
 		BaseRequestURL: url,
 		MainListener:   nil,
-		CommandFuncs:   map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string{}}
+		// CommandFuncs:     map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string{},
+		TestCommandFuncs: []CommandStructure{}}
 	user, err := tgbot.GetMe()
 	if err != nil {
 		panic(err)
@@ -36,20 +37,88 @@ func NewTgBot(token string) TgBot {
 
 // TgBot basic bot struct
 type TgBot struct {
-	Token              string
-	FirstName          string
-	ID                 int
-	Username           string
-	BaseRequestURL     string
-	MainListener       chan MessageWithUpdateID
-	LastUpdateID       int
-	CommandFuncs       map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string
-	SimpleCommandFuncs map[*regexp.Regexp]func(TgBot, Message, string) *string
+	Token          string
+	FirstName      string
+	ID             int
+	Username       string
+	BaseRequestURL string
+	MainListener   chan MessageWithUpdateID
+	LastUpdateID   int
+	// CommandFuncs     map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string
+	TestCommandFuncs []CommandStructure
 }
 
 // SimpleCommandFuncStruct struct wrapper for simple command funcs
 type SimpleCommandFuncStruct struct {
 	f func(TgBot, Message, string) *string
+}
+
+// CommandStructure ...
+type CommandStructure interface {
+	canCall(string) bool
+	call(TgBot, Message, string)
+}
+
+// RegexCommand ...
+type RegexCommand struct {
+	Regex *regexp.Regexp
+	f     func(TgBot, Message, []string, map[string]string) *string
+}
+
+// canCall ...
+func (rc RegexCommand) canCall(text string) bool {
+	return rc.Regex.MatchString(text)
+}
+
+// call ...
+func (rc RegexCommand) call(bot TgBot, msg Message, text string) {
+	vals := rc.Regex.FindStringSubmatch(text)
+	kvals := FindStringSubmatchMap(rc.Regex, text)
+	go func() {
+		res := rc.f(bot, msg, vals, kvals)
+		if res != nil && *res != "" {
+			bot.SimpleSendMessage(msg, *res)
+		}
+	}()
+}
+
+// MultiRegexCommand ...
+type MultiRegexCommand struct {
+	Regex []*regexp.Regexp
+	f     func(TgBot, Message, []string, map[string]string) *string
+}
+
+// getRegexMatch
+func (rc MultiRegexCommand) getRegexMatch(text string) (bool, *regexp.Regexp) {
+	for _, r := range rc.Regex {
+		if r.MatchString(text) {
+			return true, r
+		}
+	}
+	return false, nil
+}
+
+// canCall ...
+func (rc MultiRegexCommand) canCall(text string) bool {
+	res, _ := rc.getRegexMatch(text)
+	return res
+}
+
+// call ...
+func (rc MultiRegexCommand) call(bot TgBot, msg Message, text string) {
+	canC, regexToUse := rc.getRegexMatch(text)
+	if !canC {
+		fmt.Println("Error")
+		return
+	}
+	vals := regexToUse.FindStringSubmatch(text)
+	kvals := FindStringSubmatchMap(regexToUse, text)
+	go func() {
+		res := rc.f(bot, msg, vals, kvals)
+		if res != nil && *res != "" {
+			bot.SimpleSendMessage(msg, *res)
+		}
+	}()
 }
 
 // CallSimpleCommandFunc wrapper for simple functions
@@ -83,19 +152,57 @@ func (bot TgBot) AddUsernameExpr(expr string) string {
 	return newexpr
 }
 
+// AddToCommandFuncs ...
+func (bot *TgBot) AddToCommandFuncs(cs CommandStructure) {
+	bot.TestCommandFuncs = append(bot.TestCommandFuncs, cs)
+}
+
 // CommandFn Add a command function callback
-func (bot TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) {
+func (bot TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
-	bot.CommandFuncs[r] = f
+
+	bot.AddToCommandFuncs(RegexCommand{r, f})
+	return bot
 }
 
 // SimpleCommandFn Add a simple command function callback
-func (bot TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) {
+func (bot TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) TgBot {
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
-	bot.CommandFuncs[r] = newf.CallSimpleCommandFunc
+
+	bot.AddToCommandFuncs(RegexCommand{r, newf.CallSimpleCommandFunc})
+	return bot
+}
+
+// RegexFn ...
+func (bot TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+	r := regexp.MustCompile(path)
+
+	bot.AddToCommandFuncs(RegexCommand{r, f})
+	return bot
+}
+
+// SimpleRegexFn ...
+func (bot TgBot) SimpleRegexFn(path string, f func(TgBot, Message, string) *string) TgBot {
+	r := regexp.MustCompile(path)
+	newf := SimpleCommandFuncStruct{f}
+
+	bot.AddToCommandFuncs(RegexCommand{r, newf.CallSimpleCommandFunc})
+	return bot
+}
+
+// MultiRegexFn ...
+func (bot TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+	rc := []*regexp.Regexp{}
+	for _, p := range paths {
+		r := regexp.MustCompile(p)
+		rc = append(rc, r)
+	}
+
+	bot.AddToCommandFuncs(MultiRegexCommand{rc, f})
+	return bot
 }
 
 // FindStringSubmatchMap ...
@@ -130,19 +237,9 @@ func MessageMatchText(r *regexp.Regexp, text string) (result bool, vals []string
 
 // ProcessTextMsg ...
 func (bot TgBot) ProcessTextMsg(msg Message, text string) {
-	for k, f := range bot.CommandFuncs {
-		match, vals, kvals := MessageMatchText(k, text)
-		if match {
-			// Saving the values in the scope for goroutine
-			gorfunc := f
-			msg := msg
-			bot := bot
-			go func() {
-				res := gorfunc(bot, msg, vals, kvals)
-				if res != nil && *res != "" {
-					bot.SimpleSendMessage(msg, *res)
-				}
-			}()
+	for _, v := range bot.TestCommandFuncs {
+		if v.canCall(text) {
+			v.call(bot, msg, text)
 		}
 	}
 }

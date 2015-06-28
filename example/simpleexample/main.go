@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/rockneurotiko/go-tgbot"
 )
@@ -66,12 +67,49 @@ func forwardHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	return nil
 }
 
+func helloHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	msgr := fmt.Sprintf("Hi %s! <3", msg.From.FirstName)
+	return &msgr
+}
+
+func tellmeHand(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals map[string]string) *string {
+	msgtext := ""
+	if len(vals) > 1 {
+		msgtext = vals[1]
+	}
+	return &msgtext
+}
+
+func multiregexHelpHand(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals map[string]string) *string {
+	if len(vals) > 1 {
+		for k, v := range availableCommands {
+			if k[1:] == vals[1] {
+				res := v
+				return &res
+			}
+		}
+	}
+	res := buildHelpMessage()
+	return &res
+}
+
+func testGoroutineHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendMessage(msg, "Starting")
+	time.Sleep(5000 * time.Millisecond)
+	r := "Ending"
+	return &r
+}
+
 func main() {
-	bot := tgbot.NewTgBot(token)
-	bot.SimpleCommandFn(`^/help$`, helpHandler)
-	bot.SimpleCommandFn(`^/keyboard$`, cmdKeyboard)
-	bot.SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard)
-	bot.SimpleCommandFn(`^/forwardme$`, forwardHand)
-	bot.CommandFn(`^/hardecho (.+)`, hardEcho)
+	bot := tgbot.NewTgBot(token).
+		MultiRegexFn([]string{`^/help (\w+)$`, `^/help$`}, multiregexHelpHand).
+		SimpleCommandFn(`^/sleep$`, testGoroutineHand).
+		SimpleCommandFn(`^/keyboard$`, cmdKeyboard).
+		SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard).
+		SimpleCommandFn(`^/forwardme$`, forwardHand).
+		CommandFn(`^/hardecho (.+)`, hardEcho).
+		SimpleRegexFn(`^Hello!$`, helloHand).
+		RegexFn(`^Tell me (.+)$`, tellmeHand)
+
 	bot.SimpleStart()
 }
