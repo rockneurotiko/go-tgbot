@@ -137,13 +137,13 @@ func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
 
 func main() {
 	bot := tgbot.NewTgBot(token).
-		SimpleCommandFn(`^/sleep$`, testGoroutineHand).
-		SimpleCommandFn(`^/keyboard$`, cmdKeyboard).
-		SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard).
-		SimpleCommandFn(`^/forwardme$`, forwardHand).
-		SimpleCommandFn(`^/showmecommands`, showMeHand).
-		CommandFn(`^/hardecho (.+)`, hardEcho).
-		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand).
+		SimpleCommandFn(`sleep`, testGoroutineHand).
+		SimpleCommandFn(`keyboard`, cmdKeyboard).
+		SimpleCommandFn(`hidekeyboard`, hideKeyboard).
+		SimpleCommandFn(`forwardme`, forwardHand).
+		SimpleCommandFn(`showmecommands`, showMeHand).
+		CommandFn(`hardecho (.+)`, hardEcho).
+		MultiCommandFn([]string{`help (\w+)`, `help`, `helpbotfather`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand)

@@ -158,6 +158,20 @@ func (bot TgBot) AddUsernameExpr(expr string) string {
 	return newexpr
 }
 
+func convertToCommand(reg string) string {
+	if !strings.HasSuffix(reg, "$") {
+		reg = reg + "$"
+	}
+	if !strings.HasPrefix(reg, "^/") {
+		if strings.HasPrefix(reg, "/") {
+			reg = "^" + reg
+		} else {
+			reg = "^/" + reg
+		}
+	}
+	return reg
+}
+
 // AddToCommandFuncs ...
 func (bot *TgBot) AddToCommandFuncs(cs CommandStructure) {
 	bot.TestCommandFuncs = append(bot.TestCommandFuncs, cs)
@@ -165,6 +179,7 @@ func (bot *TgBot) AddToCommandFuncs(cs CommandStructure) {
 
 // CommandFn Add a command function callback
 func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
+	path = convertToCommand(path)
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
 
@@ -174,7 +189,9 @@ func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[st
 
 // SimpleCommandFn Add a simple command function callback
 func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) *TgBot {
+	path = convertToCommand(path)
 	path = bot.AddUsernameExpr(path)
+	fmt.Println(path)
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
 
@@ -186,6 +203,7 @@ func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *s
 func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	rc := []*regexp.Regexp{}
 	for _, p := range paths {
+		p = convertToCommand(p)
 		p = bot.AddUsernameExpr(p)
 		r := regexp.MustCompile(p)
 		rc = append(rc, r)

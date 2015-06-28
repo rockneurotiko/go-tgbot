@@ -31,7 +31,7 @@ func echoHandler(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals map[st
 
 func main() {
 	bot := tgbot.NewTgBot("token").
-		CommandFn(`/echo (.+)`, echoHandler)
+		CommandFn(`echo (.+)`, echoHandler)
 	bot.SimpleStart()
 }
 ```
@@ -78,6 +78,8 @@ Before of explain them, you have to know what a command is. A command is what Te
 That commands always look like `/<command>`, but they can have other parameters `/<command> <param1> <param2> ...`, we'll see that later.
 
 The curious thing is that the commands can be called as `/<command>` or `/<command>@username`, this is useful when you are in a group and you want to specify the bot to send that command. If you use this functions, you don't have to worry about adding or handling the @username, the library will handle it magically for you &lt;3
+
+Also, more magic is that you don't need to write the `/` command, neither the safe-command characters for the expression, that are the starting `^` and the leading `$`, so, if you say that want the commasd `help`, the library will understand you and make `^/help(?:@username)?$` :)
 
 So, let's stop talking and let's see the functions that you can use, in the [simpleexample file](https://github.com/rockneurotiko/go-tgbot/blob/master/example/simpleexample/main.go) you can see an example for every of this ^^
 
@@ -326,13 +328,13 @@ func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
 
 func main() {
 	bot := tgbot.NewTgBot(token).
-		SimpleCommandFn(`^/sleep$`, testGoroutineHand).
-		SimpleCommandFn(`^/keyboard$`, cmdKeyboard).
-		SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard).
-		SimpleCommandFn(`^/forwardme$`, forwardHand).
-		SimpleCommandFn(`^/showmecommands`, showMeHand).
-		CommandFn(`^/hardecho (.+)`, hardEcho).
-		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand).
+		SimpleCommandFn(`sleep`, testGoroutineHand).
+		SimpleCommandFn(`keyboard`, cmdKeyboard).
+		SimpleCommandFn(`hidekeyboard`, hideKeyboard).
+		SimpleCommandFn(`forwardme`, forwardHand).
+		SimpleCommandFn(`showmecommands`, showMeHand).
+		CommandFn(`hardecho (.+)`, hardEcho).
+		MultiCommandFn([]string{`help (\w+)`, `help`, `helpbotfather`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand)
