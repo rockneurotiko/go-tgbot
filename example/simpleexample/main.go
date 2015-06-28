@@ -16,6 +16,7 @@ const (
 var availableCommands = map[string]string{
 	"/start":          "Start the bot!",
 	"/help":           "Get help!!",
+	"/helpbotfather":  "Get the help formatted to botfather",
 	"/help <command>": "Get the help of one command",
 	"/keyboard":       "Send you a keyboard",
 	"/hidekeyboard":   "Hide the keyboard",
@@ -25,18 +26,18 @@ var availableCommands = map[string]string{
 	"/showmecommands": "Returns you a keyboard with the simplest commands",
 }
 
-func buildHelpMessage() string {
+func buildHelpMessage(complete bool) string {
 	var buffer bytes.Buffer
 	for cmd, htext := range availableCommands {
-		str := fmt.Sprintf("%s - %s\n", cmd, htext)
+		str := ""
+		if complete {
+			str = fmt.Sprintf("%s - %s\n", cmd, htext)
+		} else if len(strings.Split(cmd, " ")) == 1 {
+			str = fmt.Sprintf("%s - %s\n", cmd[1:], htext)
+		}
 		buffer.WriteString(str)
 	}
 	return buffer.String()
-}
-
-func helpHandler(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	res := buildHelpMessage()
-	return &res
 }
 
 func hideKeyboard(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
@@ -93,7 +94,12 @@ func multiregexHelpHand(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals
 			}
 		}
 	}
-	res := buildHelpMessage()
+	res := ""
+	if vals[0] == "/help" {
+		res = buildHelpMessage(true)
+	} else if vals[0] == "/helpbotfather" {
+		res = buildHelpMessage(false)
+	}
 	return &res
 }
 
@@ -132,7 +138,7 @@ func main() {
 		SimpleCommandFn(`^/forwardme$`, forwardHand).
 		SimpleCommandFn(`^/showmecommands`, showMeHand).
 		CommandFn(`^/hardecho (.+)`, hardEcho).
-		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`}, multiregexHelpHand).
+		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand)
 
