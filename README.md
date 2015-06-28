@@ -38,6 +38,14 @@ func main() {
 
 You can see the code in [the echo example](https://github.com/rockneurotiko/go-tgbot/blob/master/example/echoexample/main.go)
 
+## Installation
+
+As all the go libraries, you can install it with the `go` tool:
+
+```
+go get -u github.com/rockneurotiko/go-tgbot
+```
+
 ## Receiving messages!
 
 First, you need to create a new TgBot:
