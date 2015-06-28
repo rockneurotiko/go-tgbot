@@ -346,7 +346,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Simple regular expression
   - [x] Normal regular expression
   - [x] Multiple regular expressions
-  - [ ] Any message
+  - [x] Any message
   - [ ] On image
   - [ ] On audio
   - [ ] On document

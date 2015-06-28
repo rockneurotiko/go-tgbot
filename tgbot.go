@@ -15,15 +15,21 @@ const (
 	timeout = 20
 )
 
+// New just for the lazy guys
+func New(token string) *TgBot {
+	return NewTgBot(token)
+}
+
 // NewTgBot creates a new bot <3
-func NewTgBot(token string) TgBot {
+func NewTgBot(token string) *TgBot {
 	url := fmt.Sprintf(baseURL, token, "%s")
-	tgbot := TgBot{
-		Token:          token,
-		BaseRequestURL: url,
-		MainListener:   nil,
-		// CommandFuncs:     map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string{},
-		TestCommandFuncs: []CommandStructure{}}
+	tgbot := &TgBot{
+		Token:            token,
+		BaseRequestURL:   url,
+		MainListener:     nil,
+		TestCommandFuncs: []CommandStructure{},
+		AllMsgFuncs:      []func(TgBot, Message){},
+	}
 	user, err := tgbot.GetMe()
 	if err != nil {
 		panic(err)
@@ -37,15 +43,15 @@ func NewTgBot(token string) TgBot {
 
 // TgBot basic bot struct
 type TgBot struct {
-	Token          string
-	FirstName      string
-	ID             int
-	Username       string
-	BaseRequestURL string
-	MainListener   chan MessageWithUpdateID
-	LastUpdateID   int
-	// CommandFuncs     map[*regexp.Regexp]func(TgBot, Message, []string, map[string]string) *string
+	Token            string
+	FirstName        string
+	ID               int
+	Username         string
+	BaseRequestURL   string
+	MainListener     chan MessageWithUpdateID
+	LastUpdateID     int
 	TestCommandFuncs []CommandStructure
+	AllMsgFuncs      []func(TgBot, Message)
 }
 
 // SimpleCommandFuncStruct struct wrapper for simple command funcs
@@ -158,7 +164,7 @@ func (bot *TgBot) AddToCommandFuncs(cs CommandStructure) {
 }
 
 // CommandFn Add a command function callback
-func (bot TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
 
@@ -167,7 +173,7 @@ func (bot TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[str
 }
 
 // SimpleCommandFn Add a simple command function callback
-func (bot TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) TgBot {
+func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) *TgBot {
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
@@ -177,7 +183,7 @@ func (bot TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *st
 }
 
 // MultiCommandFn
-func (bot TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	rc := []*regexp.Regexp{}
 	for _, p := range paths {
 		p = bot.AddUsernameExpr(p)
@@ -190,7 +196,7 @@ func (bot TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string,
 }
 
 // RegexFn ...
-func (bot TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+func (bot *TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	r := regexp.MustCompile(path)
 
 	bot.AddToCommandFuncs(RegexCommand{r, f})
@@ -198,7 +204,7 @@ func (bot TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[strin
 }
 
 // SimpleRegexFn ...
-func (bot TgBot) SimpleRegexFn(path string, f func(TgBot, Message, string) *string) TgBot {
+func (bot *TgBot) SimpleRegexFn(path string, f func(TgBot, Message, string) *string) *TgBot {
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
 
@@ -207,7 +213,7 @@ func (bot TgBot) SimpleRegexFn(path string, f func(TgBot, Message, string) *stri
 }
 
 // MultiRegexFn ...
-func (bot TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+func (bot *TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	rc := []*regexp.Regexp{}
 	for _, p := range paths {
 		r := regexp.MustCompile(p)
@@ -215,6 +221,12 @@ func (bot TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, m
 	}
 
 	bot.AddToCommandFuncs(MultiRegexCommand{rc, f})
+	return bot
+}
+
+// AnyMsgFn ...
+func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
+	bot.AllMsgFuncs = append(bot.AllMsgFuncs, f)
 	return bot
 }
 
@@ -257,13 +269,22 @@ func (bot TgBot) ProcessTextMsg(msg Message, text string) {
 	}
 }
 
+func (bot TgBot) SendAllFunctions(msg Message) {
+	for _, v := range bot.AllMsgFuncs {
+		go v(bot, msg)
+	}
+}
+
 // ProcessAllMsg ...
 func (bot TgBot) ProcessAllMsg(msg Message) {
+	// Call text functions
 	if msg.Text != nil {
 		text := *msg.Text
-		fmt.Println(text)
 		bot.ProcessTextMsg(msg, text)
 	}
+
+	// Call all msg functions
+	bot.SendAllFunctions(msg)
 }
 
 // MessageHandler ...

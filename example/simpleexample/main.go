@@ -112,7 +112,7 @@ func testGoroutineHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string 
 
 func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	keylayout := [][]string{{}}
-	for k, _ := range availableCommands {
+	for k := range availableCommands {
 		if len(strings.Split(k, " ")) == 1 {
 			if len(keylayout[len(keylayout)-1]) == 2 {
 				keylayout = append(keylayout, []string{k})
@@ -130,6 +130,11 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	return nil
 }
 
+func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
+	// uncomment this to see it :)
+	// bot.SimpleSendMessage(msg, "Received message!")
+}
+
 func main() {
 	bot := tgbot.NewTgBot(token).
 		SimpleCommandFn(`^/sleep$`, testGoroutineHand).
@@ -140,7 +145,19 @@ func main() {
 		CommandFn(`^/hardecho (.+)`, hardEcho).
 		MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
-		RegexFn(`^Tell me (.+)$`, tellmeHand)
+		RegexFn(`^Tell me (.+)$`, tellmeHand).
+		AnyMsgFn(allMsgHand)
 
+	// bot := tgbot.NewTgBot(token)
+	// bot.SimpleCommandFn(`^/sleep$`, testGoroutineHand)
+	// bot.SimpleCommandFn(`^/keyboard$`, cmdKeyboard)
+	// bot.SimpleCommandFn(`^/hidekeyboard$`, hideKeyboard)
+	// bot.SimpleCommandFn(`^/forwardme$`, forwardHand)
+	// bot.SimpleCommandFn(`^/showmecommands`, showMeHand)
+	// bot.CommandFn(`^/hardecho (.+)`, hardEcho)
+	// bot.MultiCommandFn([]string{`^/help (\w+)$`, `^/help$`, `^/helpbotfather$`}, multiregexHelpHand)
+	// bot.SimpleRegexFn(`^Hello!$`, helloHand)
+	// bot.RegexFn(`^Tell me (.+)$`, tellmeHand)
+	// bot.AnyMsgFn(allMsgHand)
 	bot.SimpleStart()
 }
