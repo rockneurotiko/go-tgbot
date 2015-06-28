@@ -176,6 +176,19 @@ func (bot TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *st
 	return bot
 }
 
+// MultiCommandFn
+func (bot TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
+	rc := []*regexp.Regexp{}
+	for _, p := range paths {
+		p = bot.AddUsernameExpr(p)
+		r := regexp.MustCompile(p)
+		rc = append(rc, r)
+	}
+
+	bot.AddToCommandFuncs(MultiRegexCommand{rc, f})
+	return bot
+}
+
 // RegexFn ...
 func (bot TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[string]string) *string) TgBot {
 	r := regexp.MustCompile(path)
@@ -384,21 +397,21 @@ func (bot TgBot) SimpleSendMessage(msg Message, text string) (res Message, err e
 }
 
 // SendMessageWithKeyboard ...
-func (bot TgBot) SendMessageWithKeyboard(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardMarkup) {
+func (bot TgBot) SendMessageWithKeyboard(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
 }
 
 // SendMessageWithForceReply ...
-func (bot TgBot) SendMessageWithForceReply(cid int, text string, dwp *bool, rtmid *int, rm ForceReply) {
+func (bot TgBot) SendMessageWithForceReply(cid int, text string, dwp *bool, rtmid *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
 }
 
 // SendMessageWithKeyboardHide ...
-func (bot TgBot) SendMessageWithKeyboardHide(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardHide) {
+func (bot TgBot) SendMessageWithKeyboardHide(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
 }
 
 // SendMessage full function wrapper for sendMessage
