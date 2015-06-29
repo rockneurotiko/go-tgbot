@@ -152,8 +152,15 @@ Actually, this functions work exactly the same as their command-like function, j
 
 Now, let's see the callback functions that are not text.
 
+- `ImageFn(func(TgBot, Message, []PhotoSize, string))`
+  Function to be called when an image is received, the two extra parameters are an array of PhotoSize, and the ID of the file.
+
 - `AnyMsgFn(func(TgBot, Message))`
   This functions will be called in every message, be careful!
+
+- `CustomFn(func(TgBot, Message) bool, func(TgBot, Message))`
+  With this callbacks you can add your custom conditions, first it will execute the first function, if the return value is true, execute the second one.
+
 
 ## Doing actions!
 
@@ -185,11 +192,26 @@ All the actions have a "pure" function that just sends the query, you can call t
   - `SendMessageWithForceReply(chatid int, text string, disable_web_preview *bool, reply_to_message_id *int, reply_markup ForceReply) ResultWithMessage`: This makes easier to send a force reply, just pass the struct :)
 
   - `SendMessageQuery(payload QuerySendMessage) ResultWithMessage`: Try not to use this :)
+
 - `ForwardMessage` functions:
 
   - `ForwardMessage(chatid int, fromid int, messageid int) ResultWithMessage`: Will forward to `chatid` saying that comes from `fromid` the message `messageid`
 
   - `ForwardMessageQuery(payload ForwardMessageQuery) ResultWithMessage`: Try to don't use this :)
+
+- `SendPhoto` functions, wherever you see the `path`, can be a file path or a file id :smile:, it's handled automatically:
+
+  - `SimpleSendPhoto(msg Message, path string) (Message, error)`: Simplified call with the path and a string, and it will send that string to the sender.
+
+  - `SendPhoto(chatid int, path string, caption *string, reply_to_message_id *int, reply_markup *ReplyMarkupInt) ResultWithMessage`: Like the SendMessage, but sending the photo, use this for full control over the parameters.
+
+  - `SendPhotoWithKeyboard(chatid int, path string, caption *string, reply_to_message_id *int, reply_markup ReplyKeyboardMarkup) ResultWithMessage`: This makes easier to send a keyboard, just pass the struct instead of a pointer to an interface :)
+
+  - `SendPhotoWithKeyboardHide(chatid int, path string, caption *string, reply_to_message_id *int, reply_markup ReplyKeyboardHide) ResultWithMessage`: This makes easier to send a the hide keyboard, just pass the struct instead of a pointer to an interface  :)
+
+  - `SendPhotoWithForceReply(chatid int, path string, caption *string, reply_to_message_id *int, reply_markup ForceReply) ResultWithMessage`: This makes easier to send a force reply, just pass the struct instead of a pointer to an interface  :)
+
+  - `SendPhotoQuery(payload interface{}) ResultWithMessage`: Try not to use this :) (btw, the interface{} is checked agains SendPhotoIDQuery and SendPhotoPathQuery)
 
 
 ## Full example!
@@ -340,7 +362,32 @@ func conditionFunc(bot tgbot.TgBot, msg tgbot.Message) bool {
 }
 
 func conditionCallFunc(bot tgbot.TgBot, msg tgbot.Message) {
-	bot.SimpleSendMessage(msg, "Nice image :)")
+	fmt.Printf("Text: %+v\n", msg.Text)
+	// bot.SimpleSendMessage(msg, "Nice image :)")
+}
+
+func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, id string) {
+	caption := "I like this photo <3"
+	mid := msg.ID
+	bot.SendPhoto(msg.Chat.ID, id, &caption, &mid, nil)
+}
+
+func sendImage(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	// bot.SendPhotoQuery(tgbot.SendPhotoPathQuery{msg.Chat.ID, "test.jpg", nil, nil, nil})
+	// bot.SendPhoto(msg.Chat.ID, "test.jpg", nil, nil, nil)
+	bot.SimpleSendPhoto(msg, "test.jpg")
+	return nil
+}
+
+func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	keylayout := [][]string{{"I love it"}, {"Nah..."}}
+	rkm := tgbot.ReplyKeyboardMarkup{
+		Keyboard:        keylayout,
+		ResizeKeyboard:  false,
+		OneTimeKeyboard: false,
+		Selective:       false}
+	bot.SendPhotoWithKeyboard(msg.Chat.ID, "test.jpg", nil, nil, rkm)
+	return nil
 }
 
 func main() {
@@ -355,7 +402,11 @@ func main() {
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand).
-		CustomFn(conditionFunc, conditionCallFunc)
+		CustomFn(conditionFunc, conditionCallFunc).
+		ImageFn(imageResend).
+		SimpleCommandFn(`sendimage`, sendImage).
+		SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)
 	// bot.SimpleCommandFn(`^/sleep$`, testGoroutineHand)
@@ -369,7 +420,11 @@ func main() {
 	// bot.RegexFn(`^Tell me (.+)$`, tellmeHand)
 	// bot.AnyMsgFn(allMsgHand)
 	// bot.CustomFn(conditionFunc, conditionCallFunc)
-	bot.SimpleStart()
+	// bot.ImageFn(imageResend)
+	// bot.SimpleCommandFn(`sendimage`, sendImage)
+	// bot.SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	// bot.SimpleStart()
+
 }
 ```
 
@@ -390,7 +445,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Multiple regular expressions
   - [x] Any message
   - [x] On custom function
-  - [ ] On image
+  - [x] On image
   - [ ] On audio
   - [ ] On document
   - [ ] On video
@@ -416,12 +471,12 @@ You are welcome to help in building this project :smile: &lt;3
     - [x] This is done automatically when you use the `SimpleStart()` or `Start()`, you shouldn't touch this ;-)
   - [ ] setWebhook
     - [ ] This is done automatically when you use `ServerStart()`, you shoulnd't touch this
-  - [ ] Send photo
-   - [ ] From id
-   - [ ] From file
-   - [ ] easy with keyboard
-   - [ ] easy with force reply
-   - [ ] easy with keyboard hide
+  - [x] Send photo
+   - [x] From id
+   - [x] From file
+   - [x] easy with keyboard
+   - [x] easy with force reply
+   - [x] easy with keyboard hide
   - [ ] Send audio
    - [ ] From id
    - [ ] From file
@@ -458,3 +513,5 @@ You are welcome to help in building this project :smile: &lt;3
    - [ ] One time keyboard
   - [ ] Easy to work with authorized users
   - [ ] Easy to work with "flow" messages
+
+- [ ] Complete documentation xD

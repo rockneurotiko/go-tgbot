@@ -30,7 +30,7 @@ type Message struct {
 	ID                  int          `json:"message_id"`
 	From                User         `json:"from"`
 	Date                int          `json:"date"`
-	Chat                UserGroup    `json:"chat"` // And GroupChat :S
+	Chat                UserGroup    `json:"chat"`
 	ForwardFrom         *User        `json:"forward_from,omitempty"`
 	ForwardDate         *int         `json:"forward_date,omitempty"`
 	ReplyToMessage      *Message     `json:"reply_to_message,omitempty"`
@@ -202,6 +202,24 @@ type ForwardMessageQuery struct {
 	ChatID     int `json:"chat_id"`
 	FromChatID int `json:"from_chat_id"`
 	MessageID  int `json:"message_id"`
+}
+
+// SendPhotoIDQuery ...
+type SendPhotoIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Photo            string          `json:"photo"`
+	Caption          *string         `json:"caption,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendPhotoPathQuery ...
+type SendPhotoPathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Photo            string          `json:"photo"`
+	Caption          *string         `json:"caption,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
 
 // String conversions

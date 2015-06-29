@@ -1,12 +1,23 @@
 package tgbot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path/filepath"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/fatih/camelcase"
+	"github.com/oleiade/reflections"
 	"github.com/rockneurotiko/gorequest"
 )
 
@@ -52,147 +63,6 @@ type TgBot struct {
 	TestConditionalFuncs []ConditionCallStructure
 }
 
-// SimpleCommandFuncStruct struct wrapper for simple command funcs
-type SimpleCommandFuncStruct struct {
-	f func(TgBot, Message, string) *string
-}
-
-// ConditionalCallStructure ...
-type ConditionCallStructure interface {
-	canCall(TgBot, Message) bool
-	call(TgBot, Message)
-}
-
-// AlwaysCall ...
-type AlwaysCall struct {
-	f func(TgBot, Message)
-}
-
-// canCall ...
-func (ac AlwaysCall) canCall(bot TgBot, msg Message) bool {
-	return true
-}
-
-// call ...
-func (ac AlwaysCall) call(bot TgBot, msg Message) {
-	ac.f(bot, msg)
-}
-
-// CustomCall ...
-type CustomCall struct {
-	condition func(TgBot, Message) bool
-	f         func(TgBot, Message)
-}
-
-// canCall ...
-func (cc CustomCall) canCall(bot TgBot, msg Message) bool {
-	return cc.condition(bot, msg)
-}
-
-// call ...
-func (cc CustomCall) call(bot TgBot, msg Message) {
-	cc.f(bot, msg)
-}
-
-// TextConditionalCall ...
-type TextConditionalCall struct {
-	internal CommandStructure
-}
-
-// canCall
-func (tcc TextConditionalCall) canCall(bot TgBot, msg Message) bool {
-	return msg.Text != nil
-}
-
-// call ...
-func (tcc TextConditionalCall) call(bot TgBot, msg Message) {
-	if msg.Text == nil {
-		return
-	}
-	text := *msg.Text
-	if tcc.internal.canCall(text) {
-		tcc.internal.call(bot, msg, text)
-	}
-}
-
-// CommandStructure ...
-type CommandStructure interface {
-	canCall(string) bool
-	call(TgBot, Message, string)
-}
-
-// RegexCommand ...
-type RegexCommand struct {
-	Regex *regexp.Regexp
-	f     func(TgBot, Message, []string, map[string]string) *string
-}
-
-// canCall ...
-func (rc RegexCommand) canCall(text string) bool {
-	return rc.Regex.MatchString(text)
-}
-
-// call ...
-func (rc RegexCommand) call(bot TgBot, msg Message, text string) {
-	vals := rc.Regex.FindStringSubmatch(text)
-	kvals := FindStringSubmatchMap(rc.Regex, text)
-
-	res := rc.f(bot, msg, vals, kvals)
-	if res != nil && *res != "" {
-		bot.SimpleSendMessage(msg, *res)
-	}
-}
-
-// MultiRegexCommand ...
-type MultiRegexCommand struct {
-	Regex []*regexp.Regexp
-	f     func(TgBot, Message, []string, map[string]string) *string
-}
-
-// getRegexMatch
-func (rc MultiRegexCommand) getRegexMatch(text string) (bool, *regexp.Regexp) {
-	for _, r := range rc.Regex {
-		if r.MatchString(text) {
-			return true, r
-		}
-	}
-	return false, nil
-}
-
-// canCall ...
-func (rc MultiRegexCommand) canCall(text string) bool {
-	res, _ := rc.getRegexMatch(text)
-	return res
-}
-
-// call ...
-func (rc MultiRegexCommand) call(bot TgBot, msg Message, text string) {
-	canC, regexToUse := rc.getRegexMatch(text)
-	if !canC {
-		fmt.Println("Error")
-		return
-	}
-	vals := regexToUse.FindStringSubmatch(text)
-	kvals := FindStringSubmatchMap(regexToUse, text)
-
-	res := rc.f(bot, msg, vals, kvals)
-	if res != nil && *res != "" {
-		bot.SimpleSendMessage(msg, *res)
-	}
-}
-
-// CallSimpleCommandFunc wrapper for simple functions
-func (scf SimpleCommandFuncStruct) CallSimpleCommandFunc(bot TgBot, msg Message, m []string, km map[string]string) *string {
-	res := ""
-	if msg.Text != nil {
-		res2 := scf.f(bot, msg, *msg.Text)
-		if res2 != nil {
-			res = *res2
-		}
-	}
-	return &res
-}
-
 // AddUsernameExpr ...
 func (bot TgBot) AddUsernameExpr(expr string) string {
 	strs := strings.Split(expr, " ")
@@ -226,6 +96,7 @@ func convertToCommand(reg string) string {
 	return reg
 }
 
+// AddToConditionalFuncs ...
 func (bot *TgBot) AddToConditionalFuncs(cf ConditionCallStructure) {
 	bot.TestConditionalFuncs = append(bot.TestConditionalFuncs, cf)
 }
@@ -294,13 +165,19 @@ func (bot *TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, 
 	return bot
 }
 
-// AnyMsgFn ...
-func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
-	bot.AddToConditionalFuncs(AlwaysCall{f})
+// ImageFn ...
+func (bot *TgBot) ImageFn(f func(TgBot, Message, []PhotoSize, string)) *TgBot {
+	bot.AddToConditionalFuncs(ImageConditionalCall{f})
 	return bot
 }
 
-// CustomFn
+// AnyMsgFn ...
+func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
+	bot.AddToConditionalFuncs(CustomCall{AlwaysReturnTrue, f})
+	return bot
+}
+
+// CustomFn ...
 func (bot *TgBot) CustomFn(cond func(TgBot, Message) bool, f func(TgBot, Message)) *TgBot {
 	bot.AddToConditionalFuncs(CustomCall{cond, f})
 	return bot
@@ -340,15 +217,6 @@ func (bot TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
 	}
 }
 
-// func (tgbot *TgBot) ProcessMessagesFn(messages []MessageWithUpdateID) {
-// 	for _, msg := range messages {
-// 		if msg.UpdateID > tgbot.LastUpdateID {
-// 			tgbot.LastUpdateID = msg.UpdateID
-// 		}
-// 		tgbot.ProcessAllMsg(msg.Msg)
-// 	}
-// }
-
 // ProcessMessages ...
 func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	for _, msg := range messages {
@@ -365,22 +233,6 @@ func (bot TgBot) SimpleStart() {
 	bot.AddMainListener(ch)
 	go bot.MessageHandler(ch)
 	bot.Start()
-	// old way without channel
-	// if bot.ID == 0 {
-	// 	fmt.Println("No ID, maybe the token is bad.")
-	// 	return
-	// }
-	// i := 0
-	// for {
-	// 	i = i + 1
-	// 	fmt.Println(i)
-	// 	updatesList, err := bot.GetUpdates()
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		continue
-	// 	}
-	// 	bot.ProcessMessagesFn(updatesList)
-	// }
 }
 
 // Start ...
@@ -498,10 +350,84 @@ func (bot TgBot) ForwardMessage(cid int, fid int, mid int) ResultWithMessage {
 	return bot.ForwardMessageQuery(payload)
 }
 
+// LooksLikePath ...
+func LooksLikePath(p string) bool {
+	p = filepath.Clean(p)
+	if len(strings.Split(p, ".")) > 1 {
+		// The IDS don't have dots :P
+		// But let's check if exist, anyway
+		_, err := os.Stat(p)
+		return err == nil
+	}
+	return false
+}
+
 // ForwardMessageQuery  full forwardMessage call
 func (bot TgBot) ForwardMessageQuery(payload ForwardMessageQuery) ResultWithMessage {
 	url := bot.buildPath("forwardMessage")
 	return bot.GenericSendPostData(url, payload)
+}
+
+// SendPhotoWithKeyboard ...
+func (bot TgBot) SendPhotoWithKeyboard(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
+}
+
+// SendPhotoWithForceReply ...
+func (bot TgBot) SendPhotoWithForceReply(cid int, photo string, caption *string, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
+}
+
+// SendPhotoWithKeyboardHide ...
+func (bot TgBot) SendPhotoWithKeyboardHide(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
+}
+
+// SimpleSendPhoto ...
+func (bot TgBot) SimpleSendPhoto(msg Message, photo string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendPhotoIDQuery{cid, photo, nil, nil, nil}
+	if LooksLikePath(photo) {
+		payload = SendPhotoPathQuery{cid, photo, nil, nil, nil}
+	}
+	ressm := bot.SendPhotoQuery(payload)
+
+	if ressm.Ok && ressm.Result != nil {
+		res = *ressm.Result
+		err = nil
+	} else {
+		res = Message{}
+		err = fmt.Errorf("Error in petition.\nError code: %d\nDescription: %s", *ressm.ErrorCode, *ressm.Description)
+	}
+	return
+}
+
+// SendPhoto ...
+func (bot TgBot) SendPhoto(cid int, photo string, caption *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendPhotoIDQuery{cid, photo, caption, rmi, rm}
+	if LooksLikePath(photo) {
+		payload = SendPhotoPathQuery{cid, photo, caption, rmi, rm}
+	}
+	return bot.SendPhotoQuery(payload)
+}
+
+// SendPhotoQuery ...
+func (bot TgBot) SendPhotoQuery(payload interface{}) ResultWithMessage {
+	url := bot.buildPath("sendPhoto")
+	switch val := payload.(type) {
+	case SendPhotoIDQuery:
+		return bot.GenericSendPostData(url, val)
+	case SendPhotoPathQuery:
+		path := val.Photo
+		params := ConvertInterfaceMap(val, []string{"Photo"})
+		return bot.UploadFileWithResult(url, params, "photo", path)
+	}
+	errc := 400
+	errs := "Wrong Query!"
+	return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
 }
 
 // GenericSendPostData ...
@@ -515,6 +441,107 @@ func (bot TgBot) GenericSendPostData(url string, payload interface{}) ResultWith
 	var result ResultWithMessage
 	json.Unmarshal([]byte(body), &result)
 	return result
+}
+
+// UploadFileWithResult ...
+func (bot TgBot) UploadFileWithResult(url string, params map[string]string, fieldname string, filename string) ResultWithMessage {
+	res, err := bot.UploadFile(url, params, fieldname, filename)
+	if err != nil {
+		errc := 500
+		errs := err.Error()
+		res = ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
+	}
+	return res
+}
+
+// UploadFile ...
+func (bot TgBot) UploadFile(url string, params map[string]string, fieldname string, filename string) (ResultWithMessage, error) {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	filename = filepath.Clean(filename)
+	f, err := os.Open(filename)
+	if err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	fw, err := w.CreateFormFile(fieldname, filename)
+	if err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	if _, err = io.Copy(fw, f); err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	for key, val := range params {
+		if fw, err = w.CreateFormField(key); err != nil {
+			return ResultWithMessage{}, err
+		}
+
+		if _, err = fw.Write([]byte(val)); err != nil {
+			return ResultWithMessage{}, err
+		}
+	}
+
+	w.Close()
+
+	req, err := http.NewRequest("POST", url, &b)
+	if err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	bytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return ResultWithMessage{}, err
+	}
+
+	var apiResp ResultWithMessage
+	json.Unmarshal(bytes, &apiResp)
+
+	return apiResp, nil
+}
+
+// IsZeroOfUnderlyingType ...
+func IsZeroOfUnderlyingType(x interface{}) bool {
+	return x == reflect.Zero(reflect.TypeOf(x)).Interface()
+}
+
+// IsInList ...
+func IsInList(v string, l []string) bool {
+	sort.Strings(l)
+	i := sort.SearchStrings(l, v)
+	return i < len(l) && l[i] == v
+}
+
+// ConvertInterfaceMap ...
+func ConvertInterfaceMap(p interface{}, except []string) map[string]string {
+	nint := map[string]string{}
+	var structItems map[string]interface{}
+
+	structItems, _ = reflections.Items(p)
+	for v, v2 := range structItems {
+		if IsZeroOfUnderlyingType(v2) || IsInList(v, except) {
+			continue
+		}
+		v = strings.ToLower(strings.Join(camelcase.Split(v), "_"))
+		switch val := v2.(type) {
+		case interface{}:
+			sv, _ := json.Marshal(val)
+			nint[v] = string(sv)
+		default:
+			nint[v] = fmt.Sprintf("%+v", v2)
+		}
+	}
+	return nint
 }
 
 // buildPath build the path

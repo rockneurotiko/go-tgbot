@@ -141,7 +141,32 @@ func conditionFunc(bot tgbot.TgBot, msg tgbot.Message) bool {
 }
 
 func conditionCallFunc(bot tgbot.TgBot, msg tgbot.Message) {
-	bot.SimpleSendMessage(msg, "Nice image :)")
+	fmt.Printf("Text: %+v\n", msg.Text)
+	// bot.SimpleSendMessage(msg, "Nice image :)")
+}
+
+func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, id string) {
+	caption := "I like this photo <3"
+	mid := msg.ID
+	bot.SendPhoto(msg.Chat.ID, id, &caption, &mid, nil)
+}
+
+func sendImage(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	// bot.SendPhotoQuery(tgbot.SendPhotoPathQuery{msg.Chat.ID, "test.jpg", nil, nil, nil})
+	// bot.SendPhoto(msg.Chat.ID, "test.jpg", nil, nil, nil)
+	bot.SimpleSendPhoto(msg, "test.jpg")
+	return nil
+}
+
+func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	keylayout := [][]string{{"I love it"}, {"Nah..."}}
+	rkm := tgbot.ReplyKeyboardMarkup{
+		Keyboard:        keylayout,
+		ResizeKeyboard:  false,
+		OneTimeKeyboard: false,
+		Selective:       false}
+	bot.SendPhotoWithKeyboard(msg.Chat.ID, "test.jpg", nil, nil, rkm)
+	return nil
 }
 
 func main() {
@@ -156,7 +181,11 @@ func main() {
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand).
-		CustomFn(conditionFunc, conditionCallFunc)
+		CustomFn(conditionFunc, conditionCallFunc).
+		ImageFn(imageResend).
+		SimpleCommandFn(`sendimage`, sendImage).
+		SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)
 	// bot.SimpleCommandFn(`^/sleep$`, testGoroutineHand)
@@ -170,5 +199,9 @@ func main() {
 	// bot.RegexFn(`^Tell me (.+)$`, tellmeHand)
 	// bot.AnyMsgFn(allMsgHand)
 	// bot.CustomFn(conditionFunc, conditionCallFunc)
-	bot.SimpleStart()
+	// bot.ImageFn(imageResend)
+	// bot.SimpleCommandFn(`sendimage`, sendImage)
+	// bot.SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	// bot.SimpleStart()
+
 }
