@@ -331,7 +331,16 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 
 func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
 	// uncomment this to see it :)
+	fmt.Printf("Received message: %+v\n", msg.ID)
 	// bot.SimpleSendMessage(msg, "Received message!")
+}
+
+func conditionFunc(bot tgbot.TgBot, msg tgbot.Message) bool {
+	return msg.Photo != nil
+}
+
+func conditionCallFunc(bot tgbot.TgBot, msg tgbot.Message) {
+	bot.SimpleSendMessage(msg, "Nice image :)")
 }
 
 func main() {
@@ -345,7 +354,8 @@ func main() {
 		MultiCommandFn([]string{`help (\w+)`, `help`, `helpbotfather`}, multiregexHelpHand).
 		SimpleRegexFn(`^Hello!$`, helloHand).
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
-		AnyMsgFn(allMsgHand)
+		AnyMsgFn(allMsgHand).
+		CustomFn(conditionFunc, conditionCallFunc)
 
 	// bot := tgbot.NewTgBot(token)
 	// bot.SimpleCommandFn(`^/sleep$`, testGoroutineHand)
@@ -358,6 +368,7 @@ func main() {
 	// bot.SimpleRegexFn(`^Hello!$`, helloHand)
 	// bot.RegexFn(`^Tell me (.+)$`, tellmeHand)
 	// bot.AnyMsgFn(allMsgHand)
+	// bot.CustomFn(conditionFunc, conditionCallFunc)
 	bot.SimpleStart()
 }
 ```
@@ -378,6 +389,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Normal regular expression
   - [x] Multiple regular expressions
   - [x] Any message
+  - [x] On custom function
   - [ ] On image
   - [ ] On audio
   - [ ] On document
@@ -402,7 +414,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Forward message
   - [x] getUpdates
     - [x] This is done automatically when you use the `SimpleStart()` or `Start()`, you shouldn't touch this ;-)
-  - [ ] setWebhook !important
+  - [ ] setWebhook
     - [ ] This is done automatically when you use `ServerStart()`, you shoulnd't touch this
   - [ ] Send photo
    - [ ] From id

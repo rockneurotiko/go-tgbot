@@ -24,11 +24,10 @@ func New(token string) *TgBot {
 func NewTgBot(token string) *TgBot {
 	url := fmt.Sprintf(baseURL, token, "%s")
 	tgbot := &TgBot{
-		Token:            token,
-		BaseRequestURL:   url,
-		MainListener:     nil,
-		TestCommandFuncs: []CommandStructure{},
-		AllMsgFuncs:      []func(TgBot, Message){},
+		Token:                token,
+		BaseRequestURL:       url,
+		MainListener:         nil,
+		TestConditionalFuncs: []ConditionCallStructure{},
 	}
 	user, err := tgbot.GetMe()
 	if err != nil {
@@ -43,20 +42,77 @@ func NewTgBot(token string) *TgBot {
 
 // TgBot basic bot struct
 type TgBot struct {
-	Token            string
-	FirstName        string
-	ID               int
-	Username         string
-	BaseRequestURL   string
-	MainListener     chan MessageWithUpdateID
-	LastUpdateID     int
-	TestCommandFuncs []CommandStructure
-	AllMsgFuncs      []func(TgBot, Message)
+	Token                string
+	FirstName            string
+	ID                   int
+	Username             string
+	BaseRequestURL       string
+	MainListener         chan MessageWithUpdateID
+	LastUpdateID         int
+	TestConditionalFuncs []ConditionCallStructure
 }
 
 // SimpleCommandFuncStruct struct wrapper for simple command funcs
 type SimpleCommandFuncStruct struct {
 	f func(TgBot, Message, string) *string
+}
+
+// ConditionalCallStructure ...
+type ConditionCallStructure interface {
+	canCall(TgBot, Message) bool
+	call(TgBot, Message)
+}
+
+// AlwaysCall ...
+type AlwaysCall struct {
+	f func(TgBot, Message)
+}
+
+// canCall ...
+func (ac AlwaysCall) canCall(bot TgBot, msg Message) bool {
+	return true
+}
+
+// call ...
+func (ac AlwaysCall) call(bot TgBot, msg Message) {
+	ac.f(bot, msg)
+}
+
+// CustomCall ...
+type CustomCall struct {
+	condition func(TgBot, Message) bool
+	f         func(TgBot, Message)
+}
+
+// canCall ...
+func (cc CustomCall) canCall(bot TgBot, msg Message) bool {
+	return cc.condition(bot, msg)
+}
+
+// call ...
+func (cc CustomCall) call(bot TgBot, msg Message) {
+	cc.f(bot, msg)
+}
+
+// TextConditionalCall ...
+type TextConditionalCall struct {
+	internal CommandStructure
+}
+
+// canCall
+func (tcc TextConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Text != nil
+}
+
+// call ...
+func (tcc TextConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Text == nil {
+		return
+	}
+	text := *msg.Text
+	if tcc.internal.canCall(text) {
+		tcc.internal.call(bot, msg, text)
+	}
 }
 
 // CommandStructure ...
@@ -80,12 +136,11 @@ func (rc RegexCommand) canCall(text string) bool {
 func (rc RegexCommand) call(bot TgBot, msg Message, text string) {
 	vals := rc.Regex.FindStringSubmatch(text)
 	kvals := FindStringSubmatchMap(rc.Regex, text)
-	go func() {
-		res := rc.f(bot, msg, vals, kvals)
-		if res != nil && *res != "" {
-			bot.SimpleSendMessage(msg, *res)
-		}
-	}()
+
+	res := rc.f(bot, msg, vals, kvals)
+	if res != nil && *res != "" {
+		bot.SimpleSendMessage(msg, *res)
+	}
 }
 
 // MultiRegexCommand ...
@@ -119,12 +174,11 @@ func (rc MultiRegexCommand) call(bot TgBot, msg Message, text string) {
 	}
 	vals := regexToUse.FindStringSubmatch(text)
 	kvals := FindStringSubmatchMap(regexToUse, text)
-	go func() {
-		res := rc.f(bot, msg, vals, kvals)
-		if res != nil && *res != "" {
-			bot.SimpleSendMessage(msg, *res)
-		}
-	}()
+
+	res := rc.f(bot, msg, vals, kvals)
+	if res != nil && *res != "" {
+		bot.SimpleSendMessage(msg, *res)
+	}
 }
 
 // CallSimpleCommandFunc wrapper for simple functions
@@ -172,9 +226,8 @@ func convertToCommand(reg string) string {
 	return reg
 }
 
-// AddToCommandFuncs ...
-func (bot *TgBot) AddToCommandFuncs(cs CommandStructure) {
-	bot.TestCommandFuncs = append(bot.TestCommandFuncs, cs)
+func (bot *TgBot) AddToConditionalFuncs(cf ConditionCallStructure) {
+	bot.TestConditionalFuncs = append(bot.TestConditionalFuncs, cf)
 }
 
 // CommandFn Add a command function callback
@@ -183,7 +236,7 @@ func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[st
 	path = bot.AddUsernameExpr(path)
 	r := regexp.MustCompile(path)
 
-	bot.AddToCommandFuncs(RegexCommand{r, f})
+	bot.AddToConditionalFuncs(TextConditionalCall{RegexCommand{r, f}})
 	return bot
 }
 
@@ -191,11 +244,10 @@ func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[st
 func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) *TgBot {
 	path = convertToCommand(path)
 	path = bot.AddUsernameExpr(path)
-	fmt.Println(path)
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
 
-	bot.AddToCommandFuncs(RegexCommand{r, newf.CallSimpleCommandFunc})
+	bot.AddToConditionalFuncs(TextConditionalCall{RegexCommand{r, newf.CallSimpleCommandFunc}})
 	return bot
 }
 
@@ -209,7 +261,7 @@ func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string
 		rc = append(rc, r)
 	}
 
-	bot.AddToCommandFuncs(MultiRegexCommand{rc, f})
+	bot.AddToConditionalFuncs(TextConditionalCall{MultiRegexCommand{rc, f}})
 	return bot
 }
 
@@ -217,7 +269,7 @@ func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string
 func (bot *TgBot) RegexFn(path string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	r := regexp.MustCompile(path)
 
-	bot.AddToCommandFuncs(RegexCommand{r, f})
+	bot.AddToConditionalFuncs(TextConditionalCall{RegexCommand{r, f}})
 	return bot
 }
 
@@ -226,7 +278,7 @@ func (bot *TgBot) SimpleRegexFn(path string, f func(TgBot, Message, string) *str
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
 
-	bot.AddToCommandFuncs(RegexCommand{r, newf.CallSimpleCommandFunc})
+	bot.AddToConditionalFuncs(TextConditionalCall{RegexCommand{r, newf.CallSimpleCommandFunc}})
 	return bot
 }
 
@@ -238,13 +290,19 @@ func (bot *TgBot) MultiRegexFn(paths []string, f func(TgBot, Message, []string, 
 		rc = append(rc, r)
 	}
 
-	bot.AddToCommandFuncs(MultiRegexCommand{rc, f})
+	bot.AddToConditionalFuncs(TextConditionalCall{MultiRegexCommand{rc, f}})
 	return bot
 }
 
 // AnyMsgFn ...
 func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
-	bot.AllMsgFuncs = append(bot.AllMsgFuncs, f)
+	bot.AddToConditionalFuncs(AlwaysCall{f})
+	return bot
+}
+
+// CustomFn
+func (bot *TgBot) CustomFn(cond func(TgBot, Message) bool, f func(TgBot, Message)) *TgBot {
+	bot.AddToConditionalFuncs(CustomCall{cond, f})
 	return bot
 }
 
@@ -265,45 +323,13 @@ func FindStringSubmatchMap(r *regexp.Regexp, s string) map[string]string {
 	return captures
 }
 
-// MessageMatchText ...
-func MessageMatchText(r *regexp.Regexp, text string) (result bool, vals []string, kvals map[string]string) {
-	result = false
-	vals = []string{}
-	kvals = map[string]string{}
-	if r.MatchString(text) {
-		result = true
-		vals = r.FindStringSubmatch(text)
-		kvals = FindStringSubmatchMap(r, text)
-	}
-	return
-}
-
-// ProcessTextMsg ...
-func (bot TgBot) ProcessTextMsg(msg Message, text string) {
-	for _, v := range bot.TestCommandFuncs {
-		if v.canCall(text) {
-			v.call(bot, msg, text)
-		}
-	}
-}
-
-// SendAllFunctions ...
-func (bot TgBot) SendAllFunctions(msg Message) {
-	for _, v := range bot.AllMsgFuncs {
-		go v(bot, msg)
-	}
-}
-
 // ProcessAllMsg ...
 func (bot TgBot) ProcessAllMsg(msg Message) {
-	// Call text functions
-	if msg.Text != nil {
-		text := *msg.Text
-		bot.ProcessTextMsg(msg, text)
+	for _, v := range bot.TestConditionalFuncs {
+		if v.canCall(bot, msg) {
+			go v.call(bot, msg)
+		}
 	}
-
-	// Call all msg functions
-	bot.SendAllFunctions(msg)
 }
 
 // MessageHandler ...
