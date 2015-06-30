@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -214,6 +216,14 @@ func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	}
 }
 
+// ProcessMessage ...
+func (bot *TgBot) ProcessMessage(msg MessageWithUpdateID) {
+	if msg.UpdateID > bot.LastUpdateID {
+		bot.LastUpdateID = msg.UpdateID
+	}
+	bot.MainListener <- msg
+}
+
 // MessageHandler ...
 func (bot *TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
 	for {
@@ -352,41 +362,61 @@ func (bot TgBot) ForwardMessageQuery(payload ForwardMessageQuery) ResultWithMess
 }
 
 // SendPhotoWithKeyboard ...
-func (bot TgBot) SendPhotoWithKeyboard(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendPhotoWithKeyboard(cid int, photo interface{}, caption *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
 }
 
 // SendPhotoWithForceReply ...
-func (bot TgBot) SendPhotoWithForceReply(cid int, photo string, caption *string, rmi *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendPhotoWithForceReply(cid int, photo interface{}, caption *string, rmi *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
 }
 
 // SendPhotoWithKeyboardHide ...
-func (bot TgBot) SendPhotoWithKeyboardHide(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendPhotoWithKeyboardHide(cid int, photo interface{}, caption *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendPhoto(cid, photo, caption, rmi, &rkm)
 }
 
 // SimpleSendPhoto ...
-func (bot TgBot) SimpleSendPhoto(msg Message, photo string) (res Message, err error) {
+func (bot TgBot) SimpleSendPhoto(msg Message, photo interface{}) (res Message, err error) {
 	cid := msg.Chat.ID
-	var payload interface{} = SendPhotoIDQuery{cid, photo, nil, nil, nil}
-	if LooksLikePath(photo) {
-		payload = SendPhotoPathQuery{cid, photo, nil, nil, nil}
-	}
-	ressm := bot.SendPhotoQuery(payload)
+	ressm := bot.SendPhoto(cid, photo, nil, nil, nil)
 	return SplitResultInMessageError(ressm)
 }
 
 // SendPhoto ...
-func (bot TgBot) SendPhoto(cid int, photo string, caption *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendPhotoIDQuery{cid, photo, caption, rmi, rm}
-	if LooksLikePath(photo) {
-		payload = SendPhotoPathQuery{cid, photo, caption, rmi, rm}
+func (bot TgBot) SendPhoto(cid int, photo interface{}, caption *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	payload, err := bot.ImageInterfaceToType(cid, photo, caption, rmi, rm)
+	if err != nil {
+		errc := 500
+		errs := err.Error()
+		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
 	}
 	return bot.SendPhotoQuery(payload)
+}
+
+// ImageInterfaceToType ...
+func (bot TgBot) ImageInterfaceToType(cid int, photo interface{}, caption *string, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
+	switch pars := photo.(type) {
+	case string:
+		payload = SendPhotoIDQuery{cid, pars, caption, rmi, rm}
+		if LooksLikePath(pars) {
+			payload = SendPhotoPathQuery{cid, pars, caption, rmi, rm}
+		}
+	case image.Image:
+		payload = struct {
+			ChatID           int             `json:"chat_id"`
+			Photo            image.Image     `json:"photo"`
+			Caption          *string         `json:"caption,omitempty"`
+			ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+			ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+		}{cid, pars, caption, rmi, rm}
+	default:
+		err = errors.New("No struct interface detected")
+	}
+	return
 }
 
 // SendPhotoQuery ...
@@ -481,41 +511,65 @@ func (bot TgBot) SendDocumentQuery(payload interface{}) ResultWithMessage {
 }
 
 // SendStickerWithKeyboard ...
-func (bot TgBot) SendStickerWithKeyboard(cid int, photo string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendStickerWithKeyboard(cid int, photo interface{}, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendSticker(cid, photo, rmi, &rkm)
 }
 
 // SendStickerWithForceReply ...
-func (bot TgBot) SendStickerWithForceReply(cid int, photo string, rmi *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendStickerWithForceReply(cid int, photo interface{}, rmi *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendSticker(cid, photo, rmi, &rkm)
 }
 
 // SendStickerWithKeyboardHide ...
-func (bot TgBot) SendStickerWithKeyboardHide(cid int, photo string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendStickerWithKeyboardHide(cid int, photo interface{}, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
 	return bot.SendSticker(cid, photo, rmi, &rkm)
 }
 
 // SimpleSendSticker ...
-func (bot TgBot) SimpleSendSticker(msg Message, photo string) (res Message, err error) {
+func (bot TgBot) SimpleSendSticker(msg Message, sticker interface{}) (res Message, err error) {
 	cid := msg.Chat.ID
-	var payload interface{} = SendStickerIDQuery{cid, photo, nil, nil}
-	if LooksLikePath(photo) {
-		payload = SendStickerPathQuery{cid, photo, nil, nil}
-	}
-	ressm := bot.SendStickerQuery(payload)
+	ressm := bot.SendSticker(cid, sticker, nil, nil)
 	return SplitResultInMessageError(ressm)
 }
 
 // SendSticker ...
-func (bot TgBot) SendSticker(cid int, photo string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendStickerIDQuery{cid, photo, rmi, rm}
-	if LooksLikePath(photo) {
-		payload = SendStickerPathQuery{cid, photo, rmi, rm}
+func (bot TgBot) SendSticker(cid int, sticker interface{}, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	payload, err := bot.StickerInterfaceToType(cid, sticker, rmi, rm)
+	if err != nil {
+		errc := 500
+		errs := err.Error()
+		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
 	}
 	return bot.SendStickerQuery(payload)
+	// var payload interface{} = SendStickerIDQuery{cid, photo, rmi, rm}
+	// if LooksLikePath(photo) {
+	// 	payload = SendStickerPathQuery{cid, photo, rmi, rm}
+	// }
+	// return bot.SendStickerQuery(payload)
+}
+
+// StickerInterfaceToType ...
+func (bot TgBot) StickerInterfaceToType(cid int, sticker interface{}, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
+	switch pars := sticker.(type) {
+	case string:
+		payload = SendStickerIDQuery{cid, pars, rmi, rm}
+		if LooksLikePath(pars) {
+			payload = SendStickerPathQuery{cid, pars, rmi, rm}
+		}
+	case image.Image:
+		payload = struct {
+			ChatID           int             `json:"chat_id"`
+			Photo            image.Image     `json:"photo"`
+			ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+			ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+		}{cid, pars, rmi, rm}
+	default:
+		err = errors.New("No struct interface detected")
+	}
+	return
 }
 
 // SendStickerQuery ...
@@ -602,6 +656,22 @@ func (bot TgBot) SendLocationQuery(payload SendLocationQuery) ResultWithMessage 
 	return bot.GenericSendPostData(url, payload)
 }
 
+// SimpleSendChatAction ...
+func (bot TgBot) SimpleSendChatAction(msg Message, ca ChatAction) {
+	bot.SendChatAction(msg.Chat.ID, ca)
+}
+
+// SendChatAction ...
+func (bot TgBot) SendChatAction(cid int, ca ChatAction) {
+	bot.SendChatActionQuery(SendChatActionQuery{cid, ca.String()})
+}
+
+// SendChatActionQuery ...
+func (bot TgBot) SendChatActionQuery(payload SendChatActionQuery) {
+	url := bot.buildPath("sendChatAction")
+	bot.GenericSendPostData(url, payload)
+}
+
 // SendGenericQuery ...
 func (bot TgBot) SendGenericQuery(path string, ignore string, file string, payload interface{}) ResultWithMessage {
 	url := bot.buildPath(path)
@@ -616,6 +686,13 @@ func (bot TgBot) SendGenericQuery(path string, ignore string, file string, paylo
 		fpath := fmt.Sprintf("%+v", ipath)
 		params := ConvertInterfaceMap(val, []string{ignore})
 		return bot.UploadFileWithResult(url, params, file, fpath)
+	default:
+		ipath, err := reflections.GetField(val, ignore)
+		if err != nil {
+			break
+		}
+		params := ConvertInterfaceMap(val, []string{ignore})
+		return bot.UploadFileWithResult(url, params, file, ipath)
 	}
 	errc := 400
 	errs := "Wrong Query!"
@@ -636,7 +713,7 @@ func (bot TgBot) GenericSendPostData(url string, payload interface{}) ResultWith
 }
 
 // UploadFileWithResult ...
-func (bot TgBot) UploadFileWithResult(url string, params map[string]string, fieldname string, filename string) ResultWithMessage {
+func (bot TgBot) UploadFileWithResult(url string, params map[string]string, fieldname string, filename interface{}) ResultWithMessage {
 	res, err := bot.UploadFile(url, params, fieldname, filename)
 	if err != nil {
 		errc := 500
@@ -647,23 +724,36 @@ func (bot TgBot) UploadFileWithResult(url string, params map[string]string, fiel
 }
 
 // UploadFile ...
-func (bot TgBot) UploadFile(url string, params map[string]string, fieldname string, filename string) (ResultWithMessage, error) {
+func (bot TgBot) UploadFile(url string, params map[string]string, fieldname string, filename interface{}) (ResultWithMessage, error) {
 	var b bytes.Buffer
+	var err error
 	w := multipart.NewWriter(&b)
+	var fw io.Writer
 
-	filename = filepath.Clean(filename)
-	f, err := os.Open(filename)
-	if err != nil {
-		return ResultWithMessage{}, err
-	}
+	switch rfile := filename.(type) {
+	case string:
+		rfile = filepath.Clean(rfile)
+		f, err := os.Open(rfile)
+		if err != nil {
+			return ResultWithMessage{}, err
+		}
 
-	fw, err := w.CreateFormFile(fieldname, filename)
-	if err != nil {
-		return ResultWithMessage{}, err
-	}
+		fw, err := w.CreateFormFile(fieldname, rfile)
+		if err != nil {
+			return ResultWithMessage{}, err
+		}
 
-	if _, err = io.Copy(fw, f); err != nil {
-		return ResultWithMessage{}, err
+		if _, err = io.Copy(fw, f); err != nil {
+			return ResultWithMessage{}, err
+		}
+	case image.Image:
+		var imageQuality = jpeg.Options{Quality: jpeg.DefaultQuality}
+		if fw, err = w.CreateFormFile("photo", "image.jpg"); err != nil {
+			return ResultWithMessage{}, err
+		}
+		if err = jpeg.Encode(fw, rfile, &imageQuality); err != nil {
+			return ResultWithMessage{}, err
+		}
 	}
 
 	for key, val := range params {
@@ -710,4 +800,14 @@ func (bot TgBot) buildPath(action string) string {
 // AddMainListener ...
 func (bot *TgBot) AddMainListener(list chan MessageWithUpdateID) {
 	bot.MainListener = list
+}
+
+// Send ...
+func (bot *TgBot) Send(cid int) *Send {
+	return &Send{cid, bot}
+}
+
+// Answer ...
+func (bot *TgBot) Answer(msg Message) *Send {
+	return &Send{msg.Chat.ID, bot}
 }

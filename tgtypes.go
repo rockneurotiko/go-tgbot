@@ -155,6 +155,36 @@ type ReplyMarkupInt interface {
 	ImplementReplyMarkup()
 }
 
+// ChatAction ...
+type ChatAction int
+
+// This is the enumerable
+const (
+	Typing ChatAction = 1 + iota
+	UploadPhoto
+	RecordVideo
+	UploadVideo
+	RecordAudio
+	UploadAudio
+	UploadDocument
+	FindLocation
+)
+
+var chataction = [...]string{
+	"typing",
+	"upload_photo",
+	"record_video",
+	"upload_video",
+	"record_audio",
+	"upload_audio",
+	"upload_document",
+	"find_location",
+}
+
+func (ca ChatAction) String() string {
+	return chataction[ca-1]
+}
+
 // Result messages, this is what we receive from GET params
 
 // ResultBase ...
@@ -293,6 +323,20 @@ type SendLocationQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Latitude         float64         `json:"latitude"`
 	Longitude        float64         `json:"longitude"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendChatActionQuery ...
+type SendChatActionQuery struct {
+	ChatID int    `json:"chat_id"`
+	Action string `json:"action"`
+}
+
+// GenericSendQuery ...
+type GenericSendQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Data             interface{}     `json:"data"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }

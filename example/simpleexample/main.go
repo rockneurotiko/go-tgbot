@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"image"
+	"math/rand"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	hexapic "github.com/blan4/hexapic/core"
+	godotenv "github.com/joho/godotenv"
 	"github.com/rockneurotiko/go-tgbot"
-)
-
-const (
-	token = ""
 )
 
 var availableCommands = map[string]string{
@@ -30,6 +32,7 @@ var availableCommands = map[string]string{
 	"/sendsticker":    "Sends you a sticker",
 	"/sendvideo":      "Sends you a video",
 	"/sendlocation":   "Sends you a location",
+	"/sendchataction": "Sends a random chat action",
 }
 
 func buildHelpMessage(complete bool) string {
@@ -48,7 +51,8 @@ func buildHelpMessage(complete bool) string {
 
 func hideKeyboard(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	rkm := tgbot.ReplyKeyboardHide{HideKeyboard: true, Selective: false}
-	bot.SendMessageWithKeyboardHide(msg.Chat.ID, "Hiden it!", nil, nil, rkm)
+	bot.Answer(msg).Text("Hidden it!").KeyboardHide(rkm).End()
+	// bot.SendMessageWithKeyboardHide(msg.Chat.ID, "Hiden it!", nil, nil, rkm)
 	return nil
 }
 
@@ -59,7 +63,8 @@ func cmdKeyboard(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: false,
 		Selective:       false}
-	bot.SendMessageWithKeyboard(msg.Chat.ID, "Enjoy the keyboard", nil, nil, rkm)
+	bot.Answer(msg).Text("Enjoy the keyboard").Keyboard(rkm).End()
+	// bot.SendMessageWithKeyboard(msg.Chat.ID, "Enjoy the keyboard", nil, nil, rkm)
 	return nil
 }
 
@@ -69,12 +74,14 @@ func hardEcho(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals map[strin
 		msgtext = vals[1]
 	}
 	rkm := tgbot.ForceReply{Force: true, Selective: false}
-	bot.SendMessageWithForceReply(msg.Chat.ID, msgtext, nil, nil, rkm)
+	bot.Answer(msg).Text(msgtext).ForceReply(rkm).End()
+	// bot.SendMessageWithForceReply(msg.Chat.ID, msgtext, nil, nil, rkm)
 	return nil
 }
 
 func forwardHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	bot.ForwardMessage(msg.Chat.ID, msg.Chat.ID, msg.ID)
+	bot.Answer(msg).Forward(msg.Chat.ID, msg.ID).End()
+	// bot.ForwardMessage(msg.Chat.ID, msg.Chat.ID, msg.ID)
 	return nil
 }
 
@@ -110,6 +117,7 @@ func multiregexHelpHand(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals
 }
 
 func testGoroutineHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.Answer(msg).Text("Starting").End()
 	bot.SimpleSendMessage(msg, "Starting")
 	time.Sleep(5000 * time.Millisecond)
 	r := "Ending"
@@ -132,7 +140,8 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: true,
 		Selective:       false}
-	bot.SendMessageWithKeyboard(msg.Chat.ID, "There you have the commands!", nil, nil, rkm)
+	bot.Answer(msg).Text("There you have the commands!").Keyboard(rkm).End()
+	// bot.SendMessageWithKeyboard(msg.Chat.ID, "There you have the commands!", nil, nil, rkm)
 	return nil
 }
 
@@ -154,13 +163,15 @@ func conditionCallFunc(bot tgbot.TgBot, msg tgbot.Message) {
 func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, id string) {
 	caption := "I like this photo <3"
 	mid := msg.ID
-	bot.SendPhoto(msg.Chat.ID, id, &caption, &mid, nil)
+	bot.Answer(msg).Photo(id).Caption(caption).ReplyToMessage(mid).End()
+	// bot.SendPhoto(msg.Chat.ID, id, &caption, &mid, nil)
 }
 
 func sendImage(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	// bot.SendPhotoQuery(tgbot.SendPhotoPathQuery{msg.Chat.ID, "test.jpg", nil, nil, nil})
 	// bot.SendPhoto(msg.Chat.ID, "test.jpg", nil, nil, nil)
-	bot.SimpleSendPhoto(msg, "example/simpleexample/files/test.jpg")
+	// bot.SimpleSendPhoto(msg, "example/simpleexample/files/test.jpg")
+	bot.Answer(msg).Photo("example/simpleexample/files/test.jpg").End()
 	return nil
 }
 
@@ -171,60 +182,135 @@ func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: false,
 		Selective:       false}
-	bot.SendPhotoWithKeyboard(msg.Chat.ID, "example/simpleexample/files/test.jpg", nil, nil, rkm)
+	bot.Answer(msg).
+		Photo("example/simpleexample/files/test.jpg").
+		Keyboard(rkm).
+		End()
+	// bot.SendPhotoWithKeyboard(msg.Chat.ID, "example/simpleexample/files/test.jpg", nil, nil, rkm)
 	return nil
 }
 
 func sendAudio(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	bot.SimpleSendAudio(msg, "example/simpleexample/files/test.mp3")
+	bot.Answer(msg).
+		Audio("example/simpleexample/files/test.mp3").
+		End()
+	// bot.SimpleSendAudio(msg, "example/simpleexample/files/test.mp3")
 	return nil
 }
 
 func returnAudio(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Audio, fid string) {
-	bot.SimpleSendAudio(msg, fid)
+	bot.Answer(msg).Audio(fid).End()
+	// bot.SimpleSendAudio(msg, fid)
 }
 
 func sendDocument(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	mid := msg.ID
-	bot.SendDocument(msg.Chat.ID, "example/simpleexample/files/PracticalPrincipledFRP.pdf", &mid, nil)
+	bot.Answer(msg).
+		Document("example/simpleexample/files/PracticalPrincipledFRP.pdf").
+		ReplyToMessage(mid).
+		End()
+	// bot.SendDocument(msg.Chat.ID, "example/simpleexample/files/PracticalPrincipledFRP.pdf", &mid, nil)
 	return nil
 }
 
-func returnDocument(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Document, fid string) {
-	bot.SimpleSendDocument(msg, fid)
+func returnDocument(bot tgbot.TgBot, msg tgbot.Message, document tgbot.Document, fid string) {
+	bot.Answer(msg).
+		Document(fid).
+		End()
+	// bot.SimpleSendDocument(msg, fid)
 }
 
 func sendSticker(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	bot.SimpleSendSticker(msg, "example/simpleexample/files/sticker.webp")
+	bot.Answer(msg).Sticker("example/simpleexample/files/sticker.webp").End()
+	// bot.SimpleSendSticker(msg, "example/simpleexample/files/sticker.webp")
 	return nil
 }
 
-func returnSticker(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Sticker, fid string) {
+func returnSticker(bot tgbot.TgBot, msg tgbot.Message, sticker tgbot.Sticker, fid string) {
 	mid := msg.ID
-	bot.SendSticker(msg.Chat.ID, fid, &mid, nil)
+	bot.Answer(msg).
+		Sticker(fid).
+		ReplyToMessage(mid).
+		End()
+	// bot.SendSticker(msg.Chat.ID, fid, &mid, nil)
 }
 
 func sendVideo(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	bot.SimpleSendVideo(msg, "example/simpleexample/files/video.mp4")
+	bot.Answer(msg).
+		Video("example/simpleexample/files/video.mp4").
+		End()
+	// bot.SimpleSendVideo(msg, "example/simpleexample/files/video.mp4")
 	return nil
 }
 
-func returnVideo(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Video, fid string) {
+func returnVideo(bot tgbot.TgBot, msg tgbot.Message, video tgbot.Video, fid string) {
 	mid := msg.ID
-	bot.SendVideo(msg.Chat.ID, fid, &mid, nil)
+	bot.Answer(msg).
+		Video(fid).
+		ReplyToMessage(mid).
+		End()
+	// bot.SendVideo(msg.Chat.ID, fid, &mid, nil)
 }
 
 func sendLocation(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
-	bot.SimpleSendLocation(msg, 40.324159, -4.21096) // Just a random location xD
+	bot.Answer(msg).
+		Location(40.324159, -4.21096).
+		End() // Just a random location xD
+	// bot.SimpleSendLocation(msg, 40.324159, -4.21096) // Just a random location xD
 	return nil
 }
 
 func returnLocation(bot tgbot.TgBot, msg tgbot.Message, latitude float64, longitude float64) {
 	mid := msg.ID
-	bot.SendLocation(msg.Chat.ID, latitude, longitude, &mid, nil)
+	bot.Answer(msg).
+		Location(latitude, longitude).
+		ReplyToMessage(mid).
+		End()
+	// bot.SendLocation(msg.Chat.ID, latitude, longitude, &mid, nil)
+}
+
+func sendAction(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	actions := []tgbot.ChatAction{tgbot.Typing, tgbot.UploadPhoto, tgbot.RecordVideo, tgbot.UploadVideo, tgbot.RecordAudio, tgbot.UploadAudio, tgbot.UploadDocument, tgbot.FindLocation}
+
+	bot.SimpleSendChatAction(msg, actions[rand.Intn(8)])
+	return nil
+}
+
+func instPic(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	httpClient := http.DefaultClient
+	clientdID := os.Getenv("INSTAGRAM_CLIENT_ID")
+	hexapicAPI := hexapic.NewSearchApi(clientdID, httpClient)
+	hexapicAPI.Count = 4
+	var imgs []image.Image
+
+	bot.Answer(msg).
+		Action(tgbot.UploadPhoto).
+		End()
+
+	imgs = hexapicAPI.SearchByTag("cat")
+	img := hexapic.GenerateCollage(imgs, 2, 2)
+	keylayout := [][]string{{"cat", "dog"}, {"nya", "chick"}}
+	rkm := tgbot.ReplyKeyboardMarkup{
+		Keyboard:        keylayout,
+		ResizeKeyboard:  true,
+		OneTimeKeyboard: true,
+		Selective:       false,
+	}
+	caption := "Guess the image!"
+	bot.Answer(msg).
+		Photo(img).
+		Caption(caption).
+		Keyboard(rkm).
+		End()
+	// bot.SendPhotoWithKeyboard(msg.Chat.ID, img, &caption, nil, rkm)
+	return nil
 }
 
 func main() {
+	godotenv.Load("secrets.env")
+	// Add a file secrets.env, with the key like:
+	// TELEGRAM_KEY=yourtoken
+	token := os.Getenv("TELEGRAM_KEY")
 	bot := tgbot.NewTgBot(token).
 		SimpleCommandFn(`sleep`, testGoroutineHand).
 		SimpleCommandFn(`keyboard`, cmdKeyboard).
@@ -249,7 +335,9 @@ func main() {
 		SimpleCommandFn(`sendvideo`, sendVideo).
 		VideoFn(returnVideo).
 		SimpleCommandFn(`sendlocation`, sendLocation).
-		LocationFn(returnLocation)
+		LocationFn(returnLocation).
+		SimpleCommandFn(`sendchataction`, sendAction).
+		SimpleCommandFn(`guessimage`, instPic)
 
 	bot.SimpleStart()
 

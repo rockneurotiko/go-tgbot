@@ -3,12 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 
+	godotenv "github.com/joho/godotenv"
 	"github.com/rockneurotiko/go-tgbot"
-)
-
-const (
-	token = ""
 )
 
 var availableCommands = map[string]string{
@@ -53,6 +51,10 @@ func MessageHandler(Incoming <-chan tgbot.MessageWithUpdateID, bot *tgbot.TgBot)
 }
 
 func main() {
+	godotenv.Load("secrets.env")
+	// Add a file secrets.env, with the key like:
+	// TELEGRAM_KEY=yourtoken
+	token := os.Getenv("TELEGRAM_KEY")
 	bot := tgbot.NewTgBot(token)
 	ch := make(chan tgbot.MessageWithUpdateID)
 	bot.AddMainListener(ch)
