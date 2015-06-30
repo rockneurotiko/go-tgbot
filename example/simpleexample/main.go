@@ -24,6 +24,12 @@ var availableCommands = map[string]string{
 	"/forwardme":      "Forward that message to you",
 	"/sleep":          "Sleep for 5 seconds, without blocking, awesome goroutines",
 	"/showmecommands": "Returns you a keyboard with the simplest commands",
+	"/sendimage":      "Sends you an image",
+	"/sendimagekey":   "Sends you an image with a custom keyboard",
+	"/senddocument":   "Sends you a document",
+	"/sendsticker":    "Sends you a sticker",
+	"/sendvideo":      "Sends you a video",
+	"/sendlocation":   "Sends you a location",
 }
 
 func buildHelpMessage(complete bool) string {
@@ -132,7 +138,7 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 
 func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
 	// uncomment this to see it :)
-	fmt.Printf("Received message: %+v\n", msg.ID)
+	fmt.Printf("Received message: %+v\n", msg)
 	// bot.SimpleSendMessage(msg, "Received message!")
 }
 
@@ -154,7 +160,7 @@ func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, i
 func sendImage(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	// bot.SendPhotoQuery(tgbot.SendPhotoPathQuery{msg.Chat.ID, "test.jpg", nil, nil, nil})
 	// bot.SendPhoto(msg.Chat.ID, "test.jpg", nil, nil, nil)
-	bot.SimpleSendPhoto(msg, "test.jpg")
+	bot.SimpleSendPhoto(msg, "example/simpleexample/files/test.jpg")
 	return nil
 }
 
@@ -165,8 +171,57 @@ func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: false,
 		Selective:       false}
-	bot.SendPhotoWithKeyboard(msg.Chat.ID, "test.jpg", nil, nil, rkm)
+	bot.SendPhotoWithKeyboard(msg.Chat.ID, "example/simpleexample/files/test.jpg", nil, nil, rkm)
 	return nil
+}
+
+func sendAudio(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendAudio(msg, "example/simpleexample/files/test.mp3")
+	return nil
+}
+
+func returnAudio(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Audio, fid string) {
+	bot.SimpleSendAudio(msg, fid)
+}
+
+func sendDocument(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	mid := msg.ID
+	bot.SendDocument(msg.Chat.ID, "example/simpleexample/files/PracticalPrincipledFRP.pdf", &mid, nil)
+	return nil
+}
+
+func returnDocument(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Document, fid string) {
+	bot.SimpleSendDocument(msg, fid)
+}
+
+func sendSticker(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendSticker(msg, "example/simpleexample/files/sticker.webp")
+	return nil
+}
+
+func returnSticker(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Sticker, fid string) {
+	mid := msg.ID
+	bot.SendSticker(msg.Chat.ID, fid, &mid, nil)
+}
+
+func sendVideo(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendVideo(msg, "example/simpleexample/files/video.mp4")
+	return nil
+}
+
+func returnVideo(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Video, fid string) {
+	mid := msg.ID
+	bot.SendVideo(msg.Chat.ID, fid, &mid, nil)
+}
+
+func sendLocation(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendLocation(msg, 40.324159, -4.21096) // Just a random location xD
+	return nil
+}
+
+func returnLocation(bot tgbot.TgBot, msg tgbot.Message, latitude float64, longitude float64) {
+	mid := msg.ID
+	bot.SendLocation(msg.Chat.ID, latitude, longitude, &mid, nil)
 }
 
 func main() {
@@ -182,9 +237,20 @@ func main() {
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand).
 		CustomFn(conditionFunc, conditionCallFunc).
-		ImageFn(imageResend).
 		SimpleCommandFn(`sendimage`, sendImage).
-		SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+		SimpleCommandFn(`sendimagekey`, sendImageWithKey).
+		ImageFn(imageResend).
+		SimpleCommandFn(`sendaudio`, sendAudio).
+		AudioFn(returnAudio).
+		SimpleCommandFn(`senddocument`, sendDocument).
+		DocumentFn(returnDocument).
+		SimpleCommandFn(`sendsticker`, sendSticker).
+		StickerFn(returnSticker).
+		SimpleCommandFn(`sendvideo`, sendVideo).
+		VideoFn(returnVideo).
+		SimpleCommandFn(`sendlocation`, sendLocation).
+		LocationFn(returnLocation)
+
 	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)
@@ -202,6 +268,17 @@ func main() {
 	// bot.ImageFn(imageResend)
 	// bot.SimpleCommandFn(`sendimage`, sendImage)
 	// bot.SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	// bot.SimpleCommandFn(`sendaudio`, sendAudio)
+	// bot.AudioFn(returnAudio)
+	// bot.SimpleCommandFn(`senddocument`, sendDocument)
+	// bot.DocumentFn(returnDocument)
+	// bot.SimpleCommandFn(`sendsticker`, sendSticker)
+	// bot.StickerFn(returnSticker)
+	// bot.SimpleCommandFn(`sendvideo`, sendVideo)
+	// bot.VideoFn(returnVideo)
+	// bot.SimpleCommandFn(`sendlocation`, sendLocation)
+	// bot.LocationFn(returnLocation)
+
 	// bot.SimpleStart()
 
 }

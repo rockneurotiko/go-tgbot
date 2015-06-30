@@ -33,18 +33,21 @@ func handleMessageText(text string, message tgbot.Message) string {
 	return tosend
 }
 
-func MessageHandler(Incoming <-chan tgbot.MessageWithUpdateID, bot tgbot.TgBot) {
+// MessageHandler will be the custom handler
+func MessageHandler(Incoming <-chan tgbot.MessageWithUpdateID, bot *tgbot.TgBot) {
 	for {
 		input := <-Incoming
 
 		if input.Msg.Text != nil {
 			text := handleMessageText(*input.Msg.Text, input.Msg)
-			nmsg, err := bot.SimpleSendMessage(input.Msg, text)
-			if err != nil {
-				fmt.Println(err)
-				continue
+			if text != "" {
+				nmsg, err := bot.SimpleSendMessage(input.Msg, text)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				fmt.Println(nmsg.String())
 			}
-			fmt.Println(nmsg.String())
 		}
 	}
 }

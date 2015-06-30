@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/oleiade/reflections"
 )
 
 const (
@@ -151,6 +153,36 @@ func (bot *TgBot) ImageFn(f func(TgBot, Message, []PhotoSize, string)) *TgBot {
 	return bot
 }
 
+// AudioFn ...
+func (bot *TgBot) AudioFn(f func(TgBot, Message, Audio, string)) *TgBot {
+	bot.AddToConditionalFuncs(AudioConditionalCall{f})
+	return bot
+}
+
+// DocumentFn ...
+func (bot *TgBot) DocumentFn(f func(TgBot, Message, Document, string)) *TgBot {
+	bot.AddToConditionalFuncs(DocumentConditionalCall{f})
+	return bot
+}
+
+// StickerFn ...
+func (bot *TgBot) StickerFn(f func(TgBot, Message, Sticker, string)) *TgBot {
+	bot.AddToConditionalFuncs(StickerConditionalCall{f})
+	return bot
+}
+
+// VideoFn ...
+func (bot *TgBot) VideoFn(f func(TgBot, Message, Video, string)) *TgBot {
+	bot.AddToConditionalFuncs(VideoConditionalCall{f})
+	return bot
+}
+
+// LocationFn ...
+func (bot *TgBot) LocationFn(f func(TgBot, Message, float64, float64)) *TgBot {
+	bot.AddToConditionalFuncs(LocationConditionalCall{f})
+	return bot
+}
+
 // AnyMsgFn ...
 func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
 	bot.AddToConditionalFuncs(CustomCall{AlwaysReturnTrue, f})
@@ -172,14 +204,6 @@ func (bot TgBot) ProcessAllMsg(msg Message) {
 	}
 }
 
-// MessageHandler ...
-func (bot TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
-	for {
-		input := <-Incoming
-		go bot.ProcessAllMsg(input.Msg) // go this or not?
-	}
-}
-
 // ProcessMessages ...
 func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	for _, msg := range messages {
@@ -190,8 +214,16 @@ func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	}
 }
 
+// MessageHandler ...
+func (bot *TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
+	for {
+		input := <-Incoming
+		go bot.ProcessAllMsg(input.Msg) // go this or not?
+	}
+}
+
 // SimpleStart Start with the default listener and callbacks
-func (bot TgBot) SimpleStart() {
+func (bot *TgBot) SimpleStart() {
 	ch := make(chan MessageWithUpdateID)
 	bot.AddMainListener(ch)
 	go bot.MessageHandler(ch)
@@ -199,7 +231,7 @@ func (bot TgBot) SimpleStart() {
 }
 
 // Start ...
-func (bot TgBot) Start() {
+func (bot *TgBot) Start() {
 	if bot.ID == 0 {
 		fmt.Println("No ID, maybe the token is bad.")
 		return
@@ -236,7 +268,16 @@ func (bot TgBot) GetMe() (User, error) {
 	dec.Decode(&data)
 
 	if !data.Ok {
-		errormsg := fmt.Sprintf("Some error happened, maybe your token is bad:\nError code: %d\nDescription: %s\nToken: %s", *data.ErrorCode, *data.Description, bot.Token)
+		errc := 403
+		desc := ""
+		if data.ErrorCode != nil {
+			errc = *data.ErrorCode
+		}
+		if data.Description != nil {
+			desc = *data.Description
+		}
+
+		errormsg := fmt.Sprintf("Some error happened, maybe your token is bad:\nError code: %d\nDescription: %s\nToken: %s", errc, desc, bot.Token)
 		return User{}, errors.New(errormsg)
 	}
 	return data.Result, nil
@@ -265,16 +306,7 @@ func (bot TgBot) GetUpdates() ([]MessageWithUpdateID, error) {
 // SimpleSendMessage send a simple text message
 func (bot TgBot) SimpleSendMessage(msg Message, text string) (res Message, err error) {
 	ressm := bot.SendMessage(msg.Chat.ID, text, nil, nil, nil)
-
-	if ressm.Ok && ressm.Result != nil {
-		res = *ressm.Result
-		err = nil
-	} else {
-		res = Message{}
-		err = fmt.Errorf("Error in petition.\nError code: %d\nDescription: %s", *ressm.ErrorCode, *ressm.Description)
-	}
-
-	return
+	return SplitResultInMessageError(ressm)
 }
 
 // SendMessageWithKeyboard ...
@@ -345,15 +377,7 @@ func (bot TgBot) SimpleSendPhoto(msg Message, photo string) (res Message, err er
 		payload = SendPhotoPathQuery{cid, photo, nil, nil, nil}
 	}
 	ressm := bot.SendPhotoQuery(payload)
-
-	if ressm.Ok && ressm.Result != nil {
-		res = *ressm.Result
-		err = nil
-	} else {
-		res = Message{}
-		err = fmt.Errorf("Error in petition.\nError code: %d\nDescription: %s", *ressm.ErrorCode, *ressm.Description)
-	}
-	return
+	return SplitResultInMessageError(ressm)
 }
 
 // SendPhoto ...
@@ -367,14 +391,231 @@ func (bot TgBot) SendPhoto(cid int, photo string, caption *string, rmi *int, rm 
 
 // SendPhotoQuery ...
 func (bot TgBot) SendPhotoQuery(payload interface{}) ResultWithMessage {
-	url := bot.buildPath("sendPhoto")
+	return bot.SendGenericQuery("sendPhoto", "Photo", "photo", payload)
+}
+
+// SendAudioWithKeyboard ...
+func (bot TgBot) SendAudioWithKeyboard(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendAudio(cid, photo, caption, rmi, &rkm)
+}
+
+// SendAudioWithForceReply ...
+func (bot TgBot) SendAudioWithForceReply(cid int, photo string, caption *string, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendAudio(cid, photo, caption, rmi, &rkm)
+}
+
+// SendAudioWithKeyboardHide ...
+func (bot TgBot) SendAudioWithKeyboardHide(cid int, photo string, caption *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendAudio(cid, photo, caption, rmi, &rkm)
+}
+
+// SimpleSendAudio ...
+func (bot TgBot) SimpleSendAudio(msg Message, photo string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendAudioIDQuery{cid, photo, nil, nil, nil}
+	if LooksLikePath(photo) {
+		payload = SendAudioPathQuery{cid, photo, nil, nil, nil}
+	}
+	ressm := bot.SendAudioQuery(payload)
+	return SplitResultInMessageError(ressm)
+}
+
+// SendAudio ...
+func (bot TgBot) SendAudio(cid int, photo string, caption *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendAudioIDQuery{cid, photo, caption, rmi, rm}
+	if LooksLikePath(photo) {
+		payload = SendAudioPathQuery{cid, photo, caption, rmi, rm}
+	}
+	return bot.SendAudioQuery(payload)
+}
+
+// SendAudioQuery ...
+func (bot TgBot) SendAudioQuery(payload interface{}) ResultWithMessage {
+	return bot.SendGenericQuery("sendAudio", "Audio", "audio", payload)
+}
+
+// SendDocumentWithKeyboard ...
+func (bot TgBot) SendDocumentWithKeyboard(cid int, photo string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendDocument(cid, photo, rmi, &rkm)
+}
+
+// SendDocumentWithForceReply ...
+func (bot TgBot) SendDocumentWithForceReply(cid int, photo string, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendDocument(cid, photo, rmi, &rkm)
+}
+
+// SendDocumentWithKeyboardHide ...
+func (bot TgBot) SendDocumentWithKeyboardHide(cid int, photo string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendDocument(cid, photo, rmi, &rkm)
+}
+
+// SimpleSendDocument ...
+func (bot TgBot) SimpleSendDocument(msg Message, photo string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendDocumentIDQuery{cid, photo, nil, nil}
+	if LooksLikePath(photo) {
+		payload = SendDocumentPathQuery{cid, photo, nil, nil}
+	}
+	ressm := bot.SendDocumentQuery(payload)
+	return SplitResultInMessageError(ressm)
+}
+
+// SendDocument ...
+func (bot TgBot) SendDocument(cid int, photo string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendDocumentIDQuery{cid, photo, rmi, rm}
+	if LooksLikePath(photo) {
+		payload = SendDocumentPathQuery{cid, photo, rmi, rm}
+	}
+	return bot.SendDocumentQuery(payload)
+}
+
+// SendDocumentQuery ...
+func (bot TgBot) SendDocumentQuery(payload interface{}) ResultWithMessage {
+	return bot.SendGenericQuery("sendDocument", "Document", "document", payload)
+}
+
+// SendStickerWithKeyboard ...
+func (bot TgBot) SendStickerWithKeyboard(cid int, photo string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendSticker(cid, photo, rmi, &rkm)
+}
+
+// SendStickerWithForceReply ...
+func (bot TgBot) SendStickerWithForceReply(cid int, photo string, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendSticker(cid, photo, rmi, &rkm)
+}
+
+// SendStickerWithKeyboardHide ...
+func (bot TgBot) SendStickerWithKeyboardHide(cid int, photo string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendSticker(cid, photo, rmi, &rkm)
+}
+
+// SimpleSendSticker ...
+func (bot TgBot) SimpleSendSticker(msg Message, photo string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendStickerIDQuery{cid, photo, nil, nil}
+	if LooksLikePath(photo) {
+		payload = SendStickerPathQuery{cid, photo, nil, nil}
+	}
+	ressm := bot.SendStickerQuery(payload)
+	return SplitResultInMessageError(ressm)
+}
+
+// SendSticker ...
+func (bot TgBot) SendSticker(cid int, photo string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendStickerIDQuery{cid, photo, rmi, rm}
+	if LooksLikePath(photo) {
+		payload = SendStickerPathQuery{cid, photo, rmi, rm}
+	}
+	return bot.SendStickerQuery(payload)
+}
+
+// SendStickerQuery ...
+func (bot TgBot) SendStickerQuery(payload interface{}) ResultWithMessage {
+	return bot.SendGenericQuery("sendSticker", "Sticker", "sticker", payload)
+}
+
+// SendVideoWithKeyboard ...
+func (bot TgBot) SendVideoWithKeyboard(cid int, photo string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVideo(cid, photo, rmi, &rkm)
+}
+
+// SendVideoWithForceReply ...
+func (bot TgBot) SendVideoWithForceReply(cid int, photo string, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVideo(cid, photo, rmi, &rkm)
+}
+
+// SendVideoWithKeyboardHide ...
+func (bot TgBot) SendVideoWithKeyboardHide(cid int, photo string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVideo(cid, photo, rmi, &rkm)
+}
+
+// SimpleSendVideo ...
+func (bot TgBot) SimpleSendVideo(msg Message, photo string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendVideoIDQuery{cid, photo, nil, nil}
+	if LooksLikePath(photo) {
+		payload = SendVideoPathQuery{cid, photo, nil, nil}
+	}
+	ressm := bot.SendVideoQuery(payload)
+	return SplitResultInMessageError(ressm)
+}
+
+// SendVideo ...
+func (bot TgBot) SendVideo(cid int, photo string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendVideoIDQuery{cid, photo, rmi, rm}
+	if LooksLikePath(photo) {
+		payload = SendVideoPathQuery{cid, photo, rmi, rm}
+	}
+	return bot.SendVideoQuery(payload)
+}
+
+// SendVideoQuery ...
+func (bot TgBot) SendVideoQuery(payload interface{}) ResultWithMessage {
+	return bot.SendGenericQuery("sendVideo", "Video", "video", payload)
+}
+
+// SimpleSendLocation send a simple text message
+func (bot TgBot) SimpleSendLocation(msg Message, latitude float64, longitude float64) (res Message, err error) {
+	ressm := bot.SendLocation(msg.Chat.ID, latitude, longitude, nil, nil)
+	return SplitResultInMessageError(ressm)
+}
+
+// SendLocationWithKeyboard ...
+func (bot TgBot) SendLocationWithKeyboard(cid int, latitude float64, longitude float64, rtmid *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendLocation(cid, latitude, longitude, rtmid, &rkm)
+}
+
+// SendLocationWithForceReply ...
+func (bot TgBot) SendLocationWithForceReply(cid int, latitude float64, longitude float64, rtmid *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendLocation(cid, latitude, longitude, rtmid, &rkm)
+}
+
+// SendLocationWithKeyboardHide ...
+func (bot TgBot) SendLocationWithKeyboardHide(cid int, latitude float64, longitude float64, rtmid *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendLocation(cid, latitude, longitude, rtmid, &rkm)
+}
+
+// SendLocation full function wrapper for sendLocation
+func (bot TgBot) SendLocation(cid int, latitude float64, longitude float64, rtmid *int, rm *ReplyMarkupInt) ResultWithMessage {
+	payload := SendLocationQuery{cid, latitude, longitude, rtmid, rm}
+	return bot.SendLocationQuery(payload)
+}
+
+// SendLocationQuery full sendLocation call
+func (bot TgBot) SendLocationQuery(payload SendLocationQuery) ResultWithMessage {
+	url := bot.buildPath("sendLocation")
+	return bot.GenericSendPostData(url, payload)
+}
+
+// SendGenericQuery ...
+func (bot TgBot) SendGenericQuery(path string, ignore string, file string, payload interface{}) ResultWithMessage {
+	url := bot.buildPath(path)
 	switch val := payload.(type) {
-	case SendPhotoIDQuery:
+	case SendPhotoIDQuery, SendAudioIDQuery, SendDocumentIDQuery, SendStickerIDQuery, SendVideoIDQuery:
 		return bot.GenericSendPostData(url, val)
-	case SendPhotoPathQuery:
-		path := val.Photo
-		params := ConvertInterfaceMap(val, []string{"Photo"})
-		return bot.UploadFileWithResult(url, params, "photo", path)
+	case SendPhotoPathQuery, SendAudioPathQuery, SendDocumentPathQuery, SendStickerPathQuery, SendVideoPathQuery:
+		ipath, err := reflections.GetField(val, ignore)
+		if err != nil {
+			break
+		}
+		fpath := fmt.Sprintf("%+v", ipath)
+		params := ConvertInterfaceMap(val, []string{ignore})
+		return bot.UploadFileWithResult(url, params, file, fpath)
 	}
 	errc := 400
 	errs := "Wrong Query!"

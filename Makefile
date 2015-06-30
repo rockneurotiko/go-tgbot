@@ -30,7 +30,7 @@ BINARYNAME=gotgbot
 TOPLEVEL_PKG := .
 # INT_LIST := tgtypes	#<-- Interface directories
 # IMPL_LIST := tgtypes	#<-- Implementation directories
-CMD_LIST := example/simpleexample	#<-- Command directories
+CMD_LIST :=  example/manualexample example/echoexample example/simpleexample	#<-- Command directories
 
 # List building
 ALL_LIST = $(TOPLEVEL_PKG)  $(CMD_LIST) # $(INT_LIST) $(IMPL_LIST)

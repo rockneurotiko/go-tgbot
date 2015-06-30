@@ -13,6 +13,6 @@ func echoHandler(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals map[st
 
 func main() {
 	bot := tgbot.NewTgBot("token").
-		CommandFn(`/echo (.+)`, echoHandler)
+		CommandFn(`echo (.+)`, echoHandler)
 	bot.SimpleStart()
 }

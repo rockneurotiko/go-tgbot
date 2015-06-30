@@ -38,7 +38,7 @@ type Message struct {
 	Audio               *Audio       `json:"audio,omitempty"`
 	Document            *Document    `json:"document,omitempty"`
 	Photo               *[]PhotoSize `json:"photo,omitempty"`
-	Sticker             *Sticker     `json:"sticket,omitempty"`
+	Sticker             *Sticker     `json:"sticker,omitempty"`
 	Video               *Video       `json:"video,omitempty"`
 	Location            *Location    `json:"location,omitempty"`
 	NewChatParticipant  *User        `json:"new_chat_participant,omitempty"`
@@ -218,6 +218,81 @@ type SendPhotoPathQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Photo            string          `json:"photo"`
 	Caption          *string         `json:"caption,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendAudioIDQuery ...
+type SendAudioIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Audio            string          `json:"audio"`
+	Caption          *string         `json:"caption,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendAudioPathQuery ...
+type SendAudioPathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Audio            string          `json:"audio"`
+	Caption          *string         `json:"caption,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendDocumentIDQuery ...
+type SendDocumentIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Document         string          `json:"document"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendDocumentPathQuery ...
+type SendDocumentPathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Document         string          `json:"document"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendStickerIDQuery ...
+type SendStickerIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Sticker          string          `json:"sticker"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendStickerPathQuery ...
+type SendStickerPathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Sticker          string          `json:"sticker"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendVideoIDQuery ...
+type SendVideoIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Video            string          `json:"video"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendVideoPathQuery ...
+type SendVideoPathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Video            string          `json:"video"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendLocationQuery ...
+type SendLocationQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Latitude         float64         `json:"latitude"`
+	Longitude        float64         `json:"longitude"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }

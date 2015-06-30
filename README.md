@@ -55,7 +55,9 @@ bot := tgbot.NewTgBot("token")
 
 The `"token"` is the token that [@botfather](https://telegram.me/botfather) gives you when you create a new bot.
 
-After that, you can add your functions that will be executed, right now only support text messages, but in a short time you will can add custom conditions of messages, and file callbacks. This functions are called in a goroutine, so don't worry to "hang" the bot :-)
+After that, you can add your functions that will be executed, see bellow to see the the different ways and conditions for your functions, choose the proper one. This functions are called in a goroutine, so don't worry to "hang" the bot :-)
+
+### Call in text messages
 
 Currently, there are two function signatures that you can use:
 
@@ -87,9 +89,9 @@ That commands always look like `/<command>`, but they can have other parameters 
 
 The curious thing is that the commands can be called as `/<command>` or `/<command>@username`, this is useful when you are in a group and you want to specify the bot to send that command. If you use this functions, you don't have to worry about adding or handling the @username, the library will handle it magically for you &lt;3
 
-Also, more magic is that you don't need to write the `/` command, neither the safe-command characters for the expression, that are the starting `^` and the leading `$`, so, if you say that want the commasd `help`, the library will understand you and make `^/help(?:@username)?$` :)
+Also, more magic is that you don't need to write the `/` command, neither the safe-command characters for the expression, that are the starting `^` and the leading `$`, so, if you say you want the command `help`, the library will understand you and make `^/help(?:@username)?$` :)
 
-So, let's stop talking and let's see the functions that you can use, in the [simpleexample file](https://github.com/rockneurotiko/go-tgbot/blob/master/example/simpleexample/main.go) you can see an example for every of this ^^
+So, let's stop talking and let's see the functions that you can use, in the [simpleexample file](https://github.com/rockneurotiko/go-tgbot/blob/master/example/simpleexample/main.go) you can see an example for every one ^^
 
 - `SimpleCommandFn(string, func(TgBot, Message, string) *string)`:
   This is the basic one, when you want a command without arguments, like the basic `/start` or `/help`, you just have to create a `simple` function that we saw before, and add it to a command.
@@ -102,7 +104,7 @@ So, let's stop talking and let's see the functions that you can use, in the [sim
 
 - `CommandFn(string, func(TgBot, Message, []string, map[string]string) *string)`:
   Sometimes, you don't want a simple command, you want something more interesting that take parameters, this function will help you.
-  This snippet code will add a command handlerp (not a simple one) (`echoHandler`) to the `/echo` command that will take a parameter, it will be called properly if `/echo@username` is used :smile:
+  This snippet code will add a command handler (not a simple one) (`echoHandler`) to the `/echo` command that will take a parameter, it will be called properly if `/echo@username` is used :smile:
   ```go
   bot := tgbot.NewTgBot("token").
     CommandFn(`^/echo (.+)`, echoHandler)
@@ -111,7 +113,7 @@ So, let's stop talking and let's see the functions that you can use, in the [sim
   The `vals []string` parameter in the echoHandler will be of size 2, the first one is the complete text, and the second one is what the capture group `(.+)` handles.
 
 - `MultiCommandFn([]string, func(TgBot, Message, []string, map[string]string) *string)`:
-  Other times, you want multiple commands, for example, you want a `/help` and `/help <command>`, of course, you can build a regexp that matches that, or build it with two different functions, but there can be more complicated, and this is a beauty way to build this.
+  Other times, you want multiple commands, for example, you want a `/help` and `/help <command>`, of course, you can build a regexp that matches that, or build it with two different functions, but there can be more complicated situations, and this is a beauty way to build this.
   You just give him a list of regular expressions that will try to execute in order, but will only execute one of them.
   ```go
   bot := tgbot.NewTgBot("token").
@@ -150,10 +152,12 @@ Actually, this functions work exactly the same as their command-like function, j
   ```
 
 
-Now, let's see the callback functions that are not text.
+### Call in file messages.
 
 - `ImageFn(func(TgBot, Message, []PhotoSize, string))`
   Function to be called when an image is received, the two extra parameters are an array of PhotoSize, and the ID of the file.
+
+### Other miscellaneous calls.
 
 - `AnyMsgFn(func(TgBot, Message))`
   This functions will be called in every message, be careful!
@@ -179,6 +183,8 @@ You can do other actions too! Did you see that the first parameter is the TgBot 
 
 All the actions have a "pure" function that just sends the query, you can call them directry, they are called like `ActionNameQuery`, for example, `SendMessageQuery` or `ForwardMessageQuery`, but it's better to use the custom functions:
 
+### Message actions
+
 - `SendMessage` functions:
 
     - `SimpleSendMessage(msg Message, text string) (Message, error)`: Simplified call with the message and a string, and it will send that string to the sender.
@@ -193,11 +199,14 @@ All the actions have a "pure" function that just sends the query, you can call t
 
   - `SendMessageQuery(payload QuerySendMessage) ResultWithMessage`: Try not to use this :)
 
+
 - `ForwardMessage` functions:
 
   - `ForwardMessage(chatid int, fromid int, messageid int) ResultWithMessage`: Will forward to `chatid` saying that comes from `fromid` the message `messageid`
 
   - `ForwardMessageQuery(payload ForwardMessageQuery) ResultWithMessage`: Try to don't use this :)
+
+### File actions
 
 - `SendPhoto` functions, wherever you see the `path`, can be a file path or a file id :smile:, it's handled automatically:
 
@@ -245,6 +254,12 @@ var availableCommands = map[string]string{
 	"/forwardme":      "Forward that message to you",
 	"/sleep":          "Sleep for 5 seconds, without blocking, awesome goroutines",
 	"/showmecommands": "Returns you a keyboard with the simplest commands",
+	"/sendimage":      "Sends you an image",
+	"/sendimagekey":   "Sends you an image with a custom keyboard",
+	"/senddocument":   "Sends you a document",
+	"/sendsticker":    "Sends you a sticker",
+	"/sendvideo":      "Sends you a video",
+	"/sendlocation":   "Sends you a location",
 }
 
 func buildHelpMessage(complete bool) string {
@@ -353,7 +368,7 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 
 func allMsgHand(bot tgbot.TgBot, msg tgbot.Message) {
 	// uncomment this to see it :)
-	fmt.Printf("Received message: %+v\n", msg.ID)
+	fmt.Printf("Received message: %+v\n", msg)
 	// bot.SimpleSendMessage(msg, "Received message!")
 }
 
@@ -375,7 +390,7 @@ func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, i
 func sendImage(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	// bot.SendPhotoQuery(tgbot.SendPhotoPathQuery{msg.Chat.ID, "test.jpg", nil, nil, nil})
 	// bot.SendPhoto(msg.Chat.ID, "test.jpg", nil, nil, nil)
-	bot.SimpleSendPhoto(msg, "test.jpg")
+	bot.SimpleSendPhoto(msg, "example/simpleexample/files/test.jpg")
 	return nil
 }
 
@@ -386,8 +401,57 @@ func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: false,
 		Selective:       false}
-	bot.SendPhotoWithKeyboard(msg.Chat.ID, "test.jpg", nil, nil, rkm)
+	bot.SendPhotoWithKeyboard(msg.Chat.ID, "example/simpleexample/files/test.jpg", nil, nil, rkm)
 	return nil
+}
+
+func sendAudio(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendAudio(msg, "example/simpleexample/files/test.mp3")
+	return nil
+}
+
+func returnAudio(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Audio, fid string) {
+	bot.SimpleSendAudio(msg, fid)
+}
+
+func sendDocument(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	mid := msg.ID
+	bot.SendDocument(msg.Chat.ID, "example/simpleexample/files/PracticalPrincipledFRP.pdf", &mid, nil)
+	return nil
+}
+
+func returnDocument(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Document, fid string) {
+	bot.SimpleSendDocument(msg, fid)
+}
+
+func sendSticker(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendSticker(msg, "example/simpleexample/files/sticker.webp")
+	return nil
+}
+
+func returnSticker(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Sticker, fid string) {
+	mid := msg.ID
+	bot.SendSticker(msg.Chat.ID, fid, &mid, nil)
+}
+
+func sendVideo(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendVideo(msg, "example/simpleexample/files/video.mp4")
+	return nil
+}
+
+func returnVideo(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Video, fid string) {
+	mid := msg.ID
+	bot.SendVideo(msg.Chat.ID, fid, &mid, nil)
+}
+
+func sendLocation(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.SimpleSendLocation(msg, 40.324159, -4.21096) // Just a random location xD
+	return nil
+}
+
+func returnLocation(bot tgbot.TgBot, msg tgbot.Message, latitude float64, longitude float64) {
+	mid := msg.ID
+	bot.SendLocation(msg.Chat.ID, latitude, longitude, &mid, nil)
 }
 
 func main() {
@@ -403,9 +467,20 @@ func main() {
 		RegexFn(`^Tell me (.+)$`, tellmeHand).
 		AnyMsgFn(allMsgHand).
 		CustomFn(conditionFunc, conditionCallFunc).
-		ImageFn(imageResend).
 		SimpleCommandFn(`sendimage`, sendImage).
-		SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+		SimpleCommandFn(`sendimagekey`, sendImageWithKey).
+		ImageFn(imageResend).
+		SimpleCommandFn(`sendaudio`, sendAudio).
+		AudioFn(returnAudio).
+		SimpleCommandFn(`senddocument`, sendDocument).
+		DocumentFn(returnDocument).
+		SimpleCommandFn(`sendsticker`, sendSticker).
+		StickerFn(returnSticker).
+		SimpleCommandFn(`sendvideo`, sendVideo).
+		VideoFn(returnVideo).
+		SimpleCommandFn(`sendlocation`, sendLocation).
+		LocationFn(returnLocation)
+
 	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)
@@ -423,6 +498,17 @@ func main() {
 	// bot.ImageFn(imageResend)
 	// bot.SimpleCommandFn(`sendimage`, sendImage)
 	// bot.SimpleCommandFn(`sendimagekey`, sendImageWithKey)
+	// bot.SimpleCommandFn(`sendaudio`, sendAudio)
+	// bot.AudioFn(returnAudio)
+	// bot.SimpleCommandFn(`senddocument`, sendDocument)
+	// bot.DocumentFn(returnDocument)
+	// bot.SimpleCommandFn(`sendsticker`, sendSticker)
+	// bot.StickerFn(returnSticker)
+	// bot.SimpleCommandFn(`sendvideo`, sendVideo)
+	// bot.VideoFn(returnVideo)
+	// bot.SimpleCommandFn(`sendlocation`, sendLocation)
+	// bot.LocationFn(returnLocation)
+
 	// bot.SimpleStart()
 
 }
@@ -446,10 +532,10 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Any message
   - [x] On custom function
   - [x] On image
-  - [ ] On audio
-  - [ ] On document
-  - [ ] On video
-  - [ ] On location
+  - [x] On audio
+  - [x] On document
+  - [x] On video
+  - [x] On location
   - [ ] On message replied
   - [ ] On message forwarded
   - [ ] On any group event
@@ -477,41 +563,46 @@ You are welcome to help in building this project :smile: &lt;3
    - [x] easy with keyboard
    - [x] easy with force reply
    - [x] easy with keyboard hide
-  - [ ] Send audio
-   - [ ] From id
-   - [ ] From file
-   - [ ] easy with keyboard
-   - [ ] easy with force reply
-   - [ ] easy with keyboard hide
-  - [ ] Send document
-   - [ ] From id
-   - [ ] From file
-   - [ ] easy with keyboard
-   - [ ] easy with force reply
-   - [ ] easy with keyboard hide
-  - [ ] Send sticker
-   - [ ] From id
-   - [ ] From file
-   - [ ] easy with keyboard
-   - [ ] easy with force reply
-   - [ ] easy with keyboard hide
-  - [ ] Send video
-   - [ ] From id
-   - [ ] From file
-   - [ ] easy with keyboard
-   - [ ] easy with force reply
-   - [ ] easy with keyboard hide
-  - [ ] Send location
+  - [x] Send audio
+   - [x] From id
+   - [x] From file
+   - [x] easy with keyboard
+   - [x] easy with force reply
+   - [x] easy with keyboard hide
+  - [x] Send document
+   - [x] From id
+   - [x] From file
+   - [x] easy with keyboard
+   - [x] easy with force reply
+   - [x] easy with keyboard hide
+  - [x] Send sticker
+   - [x] From id
+   - [x] From file
+   - [x] easy with keyboard
+   - [x] easy with force reply
+   - [x] easy with keyboard hide
+  - [x] Send video
+   - [x] From id
+   - [x] From file
+   - [x] easy with keyboard
+   - [x] easy with force reply
+   - [x] easy with keyboard hide
+  - [x] Send location
   - [ ] Send chat action
   - [ ] Get user profile photos
 
 - [ ] Other nice things!
- - [ ] Default options for messages configured before start.
-   - [ ] Disable webpage preview
-   - [ ] Reply to the message
-   - [ ] Selective the reply_markup
-   - [ ] One time keyboard
+  - [ ] Default options for messages configured before start.
+    - [ ] Disable webpage preview
+    - [ ] Reply to the message
+    - [ ] Selective the reply_markup
+    - [ ] One time keyboard
   - [ ] Easy to work with authorized users
   - [ ] Easy to work with "flow" messages
 
 - [ ] Complete documentation xD
+  - [ ] Audio doc
+  - [ ] Document doc
+  - [ ] Sticker doc
+  - [ ] Video doc
+  - [ ] Location doc

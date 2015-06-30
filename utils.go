@@ -93,6 +93,18 @@ func ConvertInterfaceMap(p interface{}, except []string) map[string]string {
 	return nint
 }
 
+// SplitResultInMessageError ...
+func SplitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
+	if ressm.Ok && ressm.Result != nil {
+		res = *ressm.Result
+		err = nil
+	} else {
+		res = Message{}
+		err = fmt.Errorf("Error in petition.\nError code: %d\nDescription: %s", *ressm.ErrorCode, *ressm.Description)
+	}
+	return
+}
+
 // postPetition ...
 func postPetition(url string, payload interface{}, ctype *string) (string, error) {
 	request := gorequest.New().Post(url).

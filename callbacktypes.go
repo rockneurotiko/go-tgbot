@@ -57,6 +57,101 @@ func (cc CustomCall) call(bot TgBot, msg Message) {
 	cc.f(bot, msg)
 }
 
+// AudioConditionalCall ...
+type AudioConditionalCall struct {
+	f func(TgBot, Message, Audio, string)
+}
+
+// canCall ...
+func (icc AudioConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Audio != nil
+}
+
+// call ...
+func (icc AudioConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Audio == nil {
+		return
+	}
+	audio := *msg.Audio
+	icc.f(bot, msg, audio, audio.FileID)
+}
+
+// DocumentConditionalCall ...
+type DocumentConditionalCall struct {
+	f func(TgBot, Message, Document, string)
+}
+
+// canCall ...
+func (icc DocumentConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Document != nil
+}
+
+// call ...
+func (icc DocumentConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Document == nil {
+		return
+	}
+	document := *msg.Document
+	icc.f(bot, msg, document, document.FileID)
+}
+
+// StickerConditionalCall ...
+type StickerConditionalCall struct {
+	f func(TgBot, Message, Sticker, string)
+}
+
+// canCall ...
+func (icc StickerConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Sticker != nil
+}
+
+// call ...
+func (icc StickerConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Sticker == nil {
+		return
+	}
+	sticker := *msg.Sticker
+	icc.f(bot, msg, sticker, sticker.FileID)
+}
+
+// VideoConditionalCall ...
+type VideoConditionalCall struct {
+	f func(TgBot, Message, Video, string)
+}
+
+// canCall ...
+func (icc VideoConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Video != nil
+}
+
+// call ...
+func (icc VideoConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Video == nil {
+		return
+	}
+	video := *msg.Video
+	icc.f(bot, msg, video, video.FileID)
+}
+
+// LocationConditionalCall ...
+type LocationConditionalCall struct {
+	f func(TgBot, Message, float64, float64)
+}
+
+// canCall ...
+func (icc LocationConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Location != nil
+}
+
+// call ...
+func (icc LocationConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Location == nil {
+		return
+	}
+	location := *msg.Location
+	icc.f(bot, msg, location.Latitude, location.Longitude)
+}
+
 // TextConditionalCall ...
 type TextConditionalCall struct {
 	internal CommandStructure
