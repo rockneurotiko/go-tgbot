@@ -5,6 +5,8 @@ This is a beauty way to build telegram bots with Go language.
 
 Almost all methods have been added, and all features will be available soon. If you want a feature that hasn't been added yet or something is broken, open an issue and let's build it!
 
+Also, if you develop a bot with this, I would love to hear about it! ^^
+
 ## Disclaimer
 
 This is the first time I write Go code, so, if you see something that I'm doing bad, please, tell me, I love to learn :-)
