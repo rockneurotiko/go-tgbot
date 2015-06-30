@@ -608,3 +608,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [ ] Sticker doc
   - [ ] Video doc
   - [ ] Location doc
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rockneurotiko/go-tgbot/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
