@@ -339,6 +339,10 @@ func main() {
 		SimpleCommandFn(`sendchataction`, sendAction).
 		SimpleCommandFn(`guessimage`, instPic)
 
+	// temp := bot.GetUserProfilePhotos(bot.ID, 1)
+	// fmt.Println(temp)
+	// res, _ := bot.SetWebhook()
+	// fmt.Println(res)
 	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)

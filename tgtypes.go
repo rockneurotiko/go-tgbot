@@ -200,6 +200,12 @@ type ResultWithMessage struct {
 	Result *Message `json:"result,omitempty"`
 }
 
+// ResultWithUserProfilePhotos ...
+type ResultWithUserProfilePhotos struct {
+	ResultBase
+	Result *UserProfilePhotos `json:"result,omitempty"`
+}
+
 // MessageWithUpdateID ...
 type MessageWithUpdateID struct {
 	Msg      Message `json:"message"`
@@ -216,6 +222,14 @@ type ResultGetUpdates struct {
 type ResultGetUser struct {
 	ResultBase
 	Result User `json:"result,omitempty"`
+}
+
+// ResultSetWebhook ...
+type ResultSetWebhook struct {
+	Ok          bool   `json:"ok"`
+	Description string `json:"description"`
+	Result      *bool  `json:"result,omitempty"`
+	ErrorCode   *int   `json:"error_code,omitempty"`
 }
 
 // QuerySendMessage ...
@@ -331,6 +345,18 @@ type SendLocationQuery struct {
 type SendChatActionQuery struct {
 	ChatID int    `json:"chat_id"`
 	Action string `json:"action"`
+}
+
+// GetUserProfilePhotosQuery ...
+type GetUserProfilePhotosQuery struct {
+	UserID int  `json:"user_id"`
+	Offset *int `json:"offset,omitempty"`
+	Limit  *int `json:"limit,omitempty"`
+}
+
+// SetWebhookQuery ...
+type SetWebhookQuery struct {
+	URL *string `json:"url,omitempty"`
 }
 
 // GenericSendQuery ...

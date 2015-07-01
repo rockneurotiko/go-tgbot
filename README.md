@@ -11,6 +11,8 @@ Also, if you develop a bot with this, I would love to hear about it! ^^
 
 This is the first time I write Go code, so, if you see something that I'm doing bad, please, tell me, I love to learn :-)
 
+Also, some people had tell me that the way this library have to handle the functions is "too javascript". I am trying to be as much Go-like as I know, and the way I build the library chains are based in `mux` and `gorequest`, if you know a most Go-like way of build this, please, tell me! (I hate JS, and have heard that my library looks like JS made me sad xD)
+
 You can talk to me in [telegram](https://telegram.me/rock_neurotiko)
 
 ## Example
@@ -42,7 +44,7 @@ You can see the code in [the echo example](https://github.com/rockneurotiko/go-t
 
 ## Installation
 
-As all the go libraries, you can install it with the `go` tool:
+As all the go libraries, you can install it with the `go get` tool:
 
 ```
 go get -u github.com/rockneurotiko/go-tgbot
@@ -59,7 +61,7 @@ The `"token"` is the token that [@botfather](https://telegram.me/botfather) give
 
 After that, you can add your functions that will be executed, see bellow to see the the different ways and conditions for your functions, choose the proper one. This functions are called in a goroutine, so don't worry to "hang" the bot :-)
 
-### Call in text messages
+### Call in text messages (The typical)
 
 Currently, there are two function signatures that you can use:
 
@@ -80,10 +82,10 @@ Currently, there are two function signatures that you can use:
   - TgBot: the instance of the bot, so you can call functions inside that one.
   - Message: The Message struct that represents it, so you can get any param.
   - []string: This will be the captures groups in the regular expression, easy to get them ^^
-  - map[string]string: This are the named capture groups, much more ealy to get them!!
+  - map[string]string: This are the named capture groups, much more easy to get them!!
 
 
-With this two kinds of function, you can build your function calls with commands in the `TgBot` instance, all the functions that start with `Simple` uses the simplest function call.
+With this two kinds of functions, you can build your function calls with commands in the `TgBot` instance, all the functions that start with `Simple` uses the simplest function call.
 
 Before of explain them, you have to know what a command is. A command is what Telegram API understand as a command, that ones that [@botfather](https://telegram.me/botfather) let you define with `/setcommands` function.
 
@@ -261,7 +263,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [ ] On delete chat photo
   - [ ] On group chat created
 
-- [ ] Action functions
+- [x] Action functions
   - [x] Get me
   - [x] Send message
     - [x] easy with keyboard
@@ -270,8 +272,8 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Forward message
   - [x] getUpdates
     - [x] This is done automatically when you use the `SimpleStart()` or `Start()`, you shouldn't touch this ;-)
-  - [ ] setWebhook
-    - [ ] This is done automatically when you use `ServerStart()`, you shoulnd't touch this
+  - [x] setWebhook  (!! in testing !!)
+    - [x] This is done automatically when you use `ServerStart()`, you can use other ways.
   - [x] Send photo
    - [x] From id
    - [x] From file
@@ -304,7 +306,7 @@ You are welcome to help in building this project :smile: &lt;3
    - [x] easy with keyboard hide
   - [x] Send location
   - [x] Send chat action
-  - [ ] Get user profile photos
+  - [x] Get user profile photos
 
 - [ ] Other nice things!
   - [ ] Default options for messages configured before start.
@@ -323,6 +325,8 @@ You are welcome to help in building this project :smile: &lt;3
   - [ ] Location doc
   - [ ] ChatAction doc
   - [ ] Awesome chain doc
+  - [ ] GetUserProfilePhotos
+  - [ ] Webhook
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rockneurotiko/go-tgbot/trend.png)](https://bitdeli.com/free "Bitdeli Badge")

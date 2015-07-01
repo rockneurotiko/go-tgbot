@@ -16,6 +16,10 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/net/context"
+
+	"github.com/codegangsta/martini"
+	"github.com/codegangsta/martini-contrib/binding"
 	"github.com/oleiade/reflections"
 )
 
@@ -197,15 +201,6 @@ func (bot *TgBot) CustomFn(cond func(TgBot, Message) bool, f func(TgBot, Message
 	return bot
 }
 
-// ProcessAllMsg ...
-func (bot TgBot) ProcessAllMsg(msg Message) {
-	for _, v := range bot.TestConditionalFuncs {
-		if v.canCall(bot, msg) {
-			go v.call(bot, msg)
-		}
-	}
-}
-
 // ProcessMessages ...
 func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	for _, msg := range messages {
@@ -224,11 +219,28 @@ func (bot *TgBot) ProcessMessage(msg MessageWithUpdateID) {
 	bot.MainListener <- msg
 }
 
-// MessageHandler ...
-func (bot *TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
+// ProcessAllMsg ...
+func (bot TgBot) ProcessAllMsg(msg Message) {
+	for _, v := range bot.TestConditionalFuncs {
+		if v.canCall(bot, msg) {
+			go v.call(bot, msg)
+		}
+	}
+}
+
+// MessagesHandler ...
+func (bot *TgBot) MessagesHandler(Incoming <-chan MessageWithUpdateID) {
 	for {
 		input := <-Incoming
 		go bot.ProcessAllMsg(input.Msg) // go this or not?
+	}
+}
+
+// MessageHandler ...
+func (bot *TgBot) MessageHandler(Incoming <-chan Message) {
+	for {
+		input := <-Incoming
+		go bot.ProcessAllMsg(input) // go this or not?
 	}
 }
 
@@ -236,8 +248,60 @@ func (bot *TgBot) MessageHandler(Incoming <-chan MessageWithUpdateID) {
 func (bot *TgBot) SimpleStart() {
 	ch := make(chan MessageWithUpdateID)
 	bot.AddMainListener(ch)
+	go bot.MessagesHandler(ch)
+	bot.Start()
+}
+
+// StartWithMessagesChannel ...
+func (bot *TgBot) StartWithMessagesChannel(ch chan MessageWithUpdateID) {
+	go bot.MessagesHandler(ch)
+	bot.Start()
+}
+
+// StartWithChannel ...
+func (bot *TgBot) StartWithChannel(ch chan Message) {
 	go bot.MessageHandler(ch)
 	bot.Start()
+}
+
+// ServerStart ...
+func (bot *TgBot) ServerStart(url string, path string) {
+	res, error := bot.SetWebhook(url)
+	if error != nil {
+		ec := res.ErrorCode
+		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+		return
+	}
+	ch := bot.GetMessageChannel()
+	m := martini.Classic()
+	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
+		ch <- msg
+	})
+	http.Handle("/", m)
+}
+
+// StartWebhookEditMartini ...
+func (bot *TgBot) StartWebhookEditMartini(url string, path string, f func(*martini.ClassicMartini) *martini.ClassicMartini) {
+	res, error := bot.SetWebhook(url)
+	if error != nil {
+		ec := res.ErrorCode
+		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+		return
+	}
+	ch := bot.GetMessageChannel()
+	m := martini.Classic()
+	m = f(m)
+	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
+		ch <- msg
+	})
+	http.Handle("/", m)
+}
+
+// GetMessageChannel ...
+func (bot *TgBot) GetMessageChannel() chan Message {
+	ch := make(chan Message)
+	go bot.MessageHandler(ch)
+	return ch
 }
 
 // Start ...
@@ -263,6 +327,71 @@ func (bot *TgBot) Start() {
 		}
 		bot.ProcessMessages(updatesList)
 	}
+}
+
+// SetWebhook ...
+func (bot TgBot) SetWebhook(args ...string) (ResultSetWebhook, error) {
+	pet := SetWebhookQuery{}
+	if len(args) >= 1 {
+		urlq := args[0]
+		pet = SetWebhookQuery{&urlq}
+	}
+	req := bot.SetWebhookQuery(pet)
+	if !req.Ok {
+		return req, errors.New(req.Description)
+	}
+	return req, nil
+}
+
+// SetWebhookQuery ...
+func (bot TgBot) SetWebhookQuery(q SetWebhookQuery) ResultSetWebhook {
+	url := bot.buildPath("setWebhook")
+	body, error := postPetition(url, q, nil)
+
+	if error != nil {
+		errc := 500
+		err := "Some error happened while sending the message"
+		return ResultSetWebhook{false, err, nil, &errc}
+	}
+	var result ResultSetWebhook
+	json.Unmarshal([]byte(body), &result)
+	return result
+}
+
+// GetUserProfilePhotos args will use only the two first parameters, the first one will be the limit of images to get, and the second will be the offset photo id.
+func (bot TgBot) GetUserProfilePhotos(uid int, args ...int) UserProfilePhotos {
+	pet := ResultWithUserProfilePhotos{}
+	getq := GetUserProfilePhotosQuery{uid, nil, nil}
+	if len(args) == 1 {
+		v1 := args[0]
+		getq = GetUserProfilePhotosQuery{uid, nil, &v1}
+	} else if len(args) >= 2 {
+		v1 := args[0]
+		v2 := args[1]
+		getq = GetUserProfilePhotosQuery{uid, &v2, &v1}
+	}
+
+	pet = bot.GetUserProfilePhotosQuery(getq)
+
+	if !pet.Ok || pet.Result == nil {
+		return UserProfilePhotos{}
+	}
+	return *pet.Result
+}
+
+// GetUserProfilePhotosQuery ...
+func (bot TgBot) GetUserProfilePhotosQuery(quer GetUserProfilePhotosQuery) ResultWithUserProfilePhotos {
+	url := bot.buildPath("getUserProfilePhotos")
+	body, error := postPetition(url, quer, nil)
+
+	if error != nil {
+		errc := 500
+		err := "Some error happened while sending the message"
+		return ResultWithUserProfilePhotos{ResultBase{false, &errc, &err}, nil}
+	}
+	var result ResultWithUserProfilePhotos
+	json.Unmarshal([]byte(body), &result)
+	return result
 }
 
 // GetMe Call getMe path
@@ -308,7 +437,7 @@ func (bot TgBot) GetUpdates() ([]MessageWithUpdateID, error) {
 	json.Unmarshal([]byte(body), &data)
 
 	if !data.Ok {
-		return []MessageWithUpdateID{}, errors.New("Some error happened in your petition, check your token.")
+		return []MessageWithUpdateID{}, errors.New("Some error happened in your petition, check your token or remove the webhook.")
 	}
 	return data.Result, nil
 }
