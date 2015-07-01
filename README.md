@@ -309,13 +309,14 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] Get user profile photos
 
 - [ ] Other nice things!
-  - [ ] Default options for messages configured before start.
-    - [ ] Disable webpage preview
-    - [ ] Reply to the message
-    - [ ] Selective the reply_markup
-    - [ ] One time keyboard
+  - [x] Default options for messages configured before start.
+    - [x] Disable webpage preview
+    - [x] Selective the reply_markup
+    - [x] One time keyboard
+    - [x] Clean initial @username in message
+    - [x] Add slash in message if don't exist and @username had been used
   - [ ] Easy to work with authorized users
-  - [ ] Easy to work with "flow" messages
+  - [x] Easy to work with "flow" messages
 
 - [ ] Complete documentation xD
   - [ ] Audio doc
@@ -327,6 +328,10 @@ You are welcome to help in building this project :smile: &lt;3
   - [ ] Awesome chain doc
   - [ ] GetUserProfilePhotos
   - [ ] Webhook
+  - [ ] Chain messages
+  - [ ] Default options
+
+- [ ] Tests
 
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rockneurotiko/go-tgbot/trend.png)](https://bitdeli.com/free "Bitdeli Badge")

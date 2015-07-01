@@ -24,6 +24,86 @@ func AlwaysReturnTrue(bot TgBot, msg Message) bool {
 	return true
 }
 
+// NewChainStructure ...
+func NewChainStructure() *ChainStructure {
+	return &ChainStructure{[]ConditionCallStructure{}, map[int]int{}, false, nil}
+}
+
+// ChainStructure ...
+type ChainStructure struct {
+	chainf     []ConditionCallStructure
+	alreadyin  map[int]int // who and what index
+	loop       bool
+	cancelcond *ConditionCallStructure
+}
+
+// AddToConditionalFuncs ...
+func (cc *ChainStructure) AddToConditionalFuncs(cf ConditionCallStructure) {
+	cc.chainf = append(cc.chainf, cf)
+}
+
+// SetLoop ...
+func (cc *ChainStructure) SetLoop(b bool) {
+	cc.loop = b
+}
+
+// SetCancelCond ...
+func (cc *ChainStructure) SetCancelCond(c ConditionCallStructure) {
+	cc.cancelcond = &c
+}
+
+// UserInChain ...
+func (cc *ChainStructure) UserInChain(msg Message) bool {
+	_, ok := cc.alreadyin[msg.From.ID]
+	return ok
+}
+
+// canCall ...
+func (cc ChainStructure) canCall(bot TgBot, msg Message) bool {
+	if len(cc.chainf) < 1 {
+		return false
+	}
+	index, ok := cc.alreadyin[msg.From.ID]
+	if !ok {
+		res := cc.chainf[0].canCall(bot, msg)
+		if res {
+			cc.alreadyin[msg.From.ID] = 0
+		}
+		return res
+	}
+	// Check for cancelable!
+	if cc.cancelcond != nil {
+		condcal := *cc.cancelcond
+		if condcal.canCall(bot, msg) {
+			delete(cc.alreadyin, msg.From.ID)
+			condcal.call(bot, msg)
+		}
+	}
+	if index < 0 || index >= len(cc.chainf) {
+		// We are more away, so delete us and test the start again :)
+		if cc.loop {
+			cc.alreadyin[msg.From.ID] = 0
+		} else {
+			delete(cc.alreadyin, msg.From.ID)
+		}
+		res := cc.chainf[0].canCall(bot, msg)
+		if res {
+			cc.alreadyin[msg.From.ID] = 0
+		}
+		return res
+	}
+	return cc.chainf[index].canCall(bot, msg)
+}
+
+// call ...
+func (cc ChainStructure) call(bot TgBot, msg Message) {
+	if cc.canCall(bot, msg) {
+		index, _ := cc.alreadyin[msg.From.ID]
+		cc.alreadyin[msg.From.ID] = index + 1
+		cc.chainf[index].call(bot, msg)
+	}
+}
+
 // ImageConditionalCall ...
 type ImageConditionalCall struct {
 	f func(TgBot, Message, []PhotoSize, string)
@@ -159,7 +239,11 @@ type TextConditionalCall struct {
 
 // canCall
 func (tcc TextConditionalCall) canCall(bot TgBot, msg Message) bool {
-	return msg.Text != nil
+	if msg.Text == nil {
+		return false
+	}
+	text := *msg.Text
+	return tcc.internal.canCall(text)
 }
 
 // call ...

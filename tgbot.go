@@ -25,8 +25,17 @@ import (
 
 const (
 	baseURL = "https://api.telegram.org/bot%s/%s"
-	timeout = 20
+	timeout = 60
 )
+
+// DefaultOptionsBot ...
+type DefaultOptionsBot struct {
+	DisableWebURL              *bool
+	Selective                  *bool
+	OneTimeKeyboard            *bool
+	CleanInitialUsername       bool
+	AllowWithoutSlashInMention bool
+}
 
 // New just for the lazy guys
 func New(token string) *TgBot {
@@ -41,6 +50,12 @@ func NewTgBot(token string) *TgBot {
 		BaseRequestURL:       url,
 		MainListener:         nil,
 		TestConditionalFuncs: []ConditionCallStructure{},
+		ChainConditionals:    []*ChainStructure{},
+		BuildingChain:        false,
+		DefaultOptions: DefaultOptionsBot{
+			CleanInitialUsername:       true,
+			AllowWithoutSlashInMention: true,
+		},
 	}
 	user, err := tgbot.GetMe()
 	if err != nil {
@@ -63,10 +78,13 @@ type TgBot struct {
 	MainListener         chan MessageWithUpdateID
 	LastUpdateID         int
 	TestConditionalFuncs []ConditionCallStructure
+	ChainConditionals    []*ChainStructure
+	BuildingChain        bool
+	DefaultOptions       DefaultOptionsBot
 }
 
-// AddUsernameExpr ...
-func (bot TgBot) AddUsernameExpr(expr string) string {
+// AddUsernameCommand ...
+func (bot TgBot) AddUsernameCommand(expr string) string {
 	strs := strings.Split(expr, " ")
 	opts := fmt.Sprintf(`(?:@%s)?`, bot.Username)
 	if len(strs) == 1 {
@@ -86,13 +104,96 @@ func (bot TgBot) AddUsernameExpr(expr string) string {
 
 // AddToConditionalFuncs ...
 func (bot *TgBot) AddToConditionalFuncs(cf ConditionCallStructure) {
-	bot.TestConditionalFuncs = append(bot.TestConditionalFuncs, cf)
+	if !bot.BuildingChain {
+		bot.TestConditionalFuncs = append(bot.TestConditionalFuncs, cf)
+	} else {
+		if len(bot.ChainConditionals) > 0 {
+			bot.ChainConditionals[len(bot.ChainConditionals)-1].AddToConditionalFuncs(cf)
+		}
+	}
+}
+
+// StartChain ...
+func (bot *TgBot) StartChain() *TgBot {
+	bot.ChainConditionals = append(bot.ChainConditionals, NewChainStructure())
+	bot.BuildingChain = true
+	return bot
+}
+
+// CancelChainCommand ...
+func (bot *TgBot) CancelChainCommand(path string, f func(TgBot, Message, string) *string) *TgBot {
+	if !bot.BuildingChain {
+		return bot
+	}
+	if len(bot.ChainConditionals) > 0 {
+
+		path = convertToCommand(path)
+		path = bot.AddUsernameCommand(path)
+		r := regexp.MustCompile(path)
+		newf := SimpleCommandFuncStruct{f}
+		bot.ChainConditionals[len(bot.ChainConditionals)-1].
+			SetCancelCond(TextConditionalCall{RegexCommand{r, newf.CallSimpleCommandFunc}})
+	}
+	return bot
+}
+
+// LoopChain ...
+func (bot *TgBot) LoopChain() *TgBot {
+	if !bot.BuildingChain {
+		return bot
+	}
+	if len(bot.ChainConditionals) > 0 {
+		bot.ChainConditionals[len(bot.ChainConditionals)-1].SetLoop(true)
+	}
+	return bot
+}
+
+// EndChain ...
+func (bot *TgBot) EndChain() *TgBot {
+	bot.BuildingChain = false
+	return bot
+}
+
+// DefaultDisableWebpagePreview ...
+func (bot *TgBot) DefaultDisableWebpagePreview(b bool) *TgBot {
+	bot.DefaultOptions.DisableWebURL = &b
+	return bot
+}
+
+// DefaultReplyMessage ...
+// func (bot *TgBot) DefaultReplyMessage(b bool) *TgBot {
+// 	bot.DefaultOptions.ReplyToMessageID = &b
+// 	return bot
+// }
+
+// DefaultSelective ...
+func (bot *TgBot) DefaultSelective(b bool) *TgBot {
+	bot.DefaultOptions.Selective = &b
+	return bot
+}
+
+// DefaultOneTimeKeyboard ...
+func (bot *TgBot) DefaultOneTimeKeyboard(b bool) *TgBot {
+	bot.DefaultOptions.OneTimeKeyboard = &b
+	return bot
+}
+
+// DefaultCleanInitialUsername ...
+func (bot *TgBot) DefaultCleanInitialUsername(b bool) *TgBot {
+	bot.DefaultOptions.CleanInitialUsername = b
+	return bot
+}
+
+// DefaultAllowWithoutSlashInMention ...
+func (bot *TgBot) DefaultAllowWithoutSlashInMention(b bool) *TgBot {
+	bot.DefaultOptions.AllowWithoutSlashInMention = b
+	return bot
 }
 
 // CommandFn Add a command function callback
 func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[string]string) *string) *TgBot {
 	path = convertToCommand(path)
-	path = bot.AddUsernameExpr(path)
+	path = bot.AddUsernameCommand(path)
 	r := regexp.MustCompile(path)
 
 	bot.AddToConditionalFuncs(TextConditionalCall{RegexCommand{r, f}})
@@ -102,7 +203,7 @@ func (bot *TgBot) CommandFn(path string, f func(TgBot, Message, []string, map[st
 // SimpleCommandFn Add a simple command function callback
 func (bot *TgBot) SimpleCommandFn(path string, f func(TgBot, Message, string) *string) *TgBot {
 	path = convertToCommand(path)
-	path = bot.AddUsernameExpr(path)
+	path = bot.AddUsernameCommand(path)
 	r := regexp.MustCompile(path)
 	newf := SimpleCommandFuncStruct{f}
 
@@ -115,7 +216,7 @@ func (bot *TgBot) MultiCommandFn(paths []string, f func(TgBot, Message, []string
 	rc := []*regexp.Regexp{}
 	for _, p := range paths {
 		p = convertToCommand(p)
-		p = bot.AddUsernameExpr(p)
+		p = bot.AddUsernameCommand(p)
 		r := regexp.MustCompile(p)
 		rc = append(rc, r)
 	}
@@ -219,8 +320,39 @@ func (bot *TgBot) ProcessMessage(msg MessageWithUpdateID) {
 	bot.MainListener <- msg
 }
 
+// CleanMessage ...
+func (bot TgBot) CleanMessage(msg Message) Message {
+	if bot.DefaultOptions.CleanInitialUsername {
+		if msg.Text != nil {
+			text := *msg.Text
+			username := fmt.Sprintf("@%s", bot.Username)
+			if strings.HasPrefix(text, username) {
+				text = strings.TrimSpace(strings.Replace(text, username, "", 1)) // Replace one time
+				if bot.DefaultOptions.AllowWithoutSlashInMention && !strings.HasSuffix(text, "/") {
+					text = "/" + text
+				}
+				msg.Text = &text
+			}
+		}
+	}
+
+	return msg
+}
+
 // ProcessAllMsg ...
 func (bot TgBot) ProcessAllMsg(msg Message) {
+	msg = bot.CleanMessage(msg)
+
+	for _, c := range bot.ChainConditionals {
+		if c.canCall(bot, msg) {
+			go c.call(bot, msg)
+			return
+		}
+		if c.UserInChain(msg) {
+			return
+		}
+	}
+
 	for _, v := range bot.TestConditionalFuncs {
 		if v.canCall(bot, msg) {
 			go v.call(bot, msg)
@@ -475,6 +607,7 @@ func (bot TgBot) SendMessage(cid int, text string, dwp *bool, rtmid *int, rm *Re
 // SendMessageQuery full sendMessage call
 func (bot TgBot) SendMessageQuery(payload QuerySendMessage) ResultWithMessage {
 	url := bot.buildPath("sendMessage")
+	HookPayload(&payload, bot.DefaultOptions)
 	return bot.GenericSendPostData(url, payload)
 }
 
@@ -487,6 +620,7 @@ func (bot TgBot) ForwardMessage(cid int, fid int, mid int) ResultWithMessage {
 // ForwardMessageQuery  full forwardMessage call
 func (bot TgBot) ForwardMessageQuery(payload ForwardMessageQuery) ResultWithMessage {
 	url := bot.buildPath("forwardMessage")
+	HookPayload(&payload, bot.DefaultOptions)
 	return bot.GenericSendPostData(url, payload)
 }
 
@@ -535,13 +669,15 @@ func (bot TgBot) ImageInterfaceToType(cid int, photo interface{}, caption *strin
 			payload = SendPhotoPathQuery{cid, pars, caption, rmi, rm}
 		}
 	case image.Image:
-		payload = struct {
+		mp := struct {
 			ChatID           int             `json:"chat_id"`
 			Photo            image.Image     `json:"photo"`
 			Caption          *string         `json:"caption,omitempty"`
 			ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 			ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 		}{cid, pars, caption, rmi, rm}
+		HookPayload(&mp, bot.DefaultOptions)
+		payload = mp
 	default:
 		err = errors.New("No struct interface detected")
 	}
@@ -782,6 +918,7 @@ func (bot TgBot) SendLocation(cid int, latitude float64, longitude float64, rtmi
 // SendLocationQuery full sendLocation call
 func (bot TgBot) SendLocationQuery(payload SendLocationQuery) ResultWithMessage {
 	url := bot.buildPath("sendLocation")
+	HookPayload(&payload, bot.DefaultOptions)
 	return bot.GenericSendPostData(url, payload)
 }
 
@@ -798,23 +935,59 @@ func (bot TgBot) SendChatAction(cid int, ca ChatAction) {
 // SendChatActionQuery ...
 func (bot TgBot) SendChatActionQuery(payload SendChatActionQuery) {
 	url := bot.buildPath("sendChatAction")
+	HookPayload(&payload, bot.DefaultOptions)
 	bot.GenericSendPostData(url, payload)
+}
+
+// SendConvertingFile ...
+func (bot TgBot) SendConvertingFile(url string, ignore string, file string, val interface{}) ResultWithMessage {
+	ipath, err := reflections.GetField(val, ignore)
+	if err != nil {
+		errc := 400
+		errs := "Wrong Query!"
+		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
+	}
+	fpath := fmt.Sprintf("%+v", ipath)
+	params := ConvertInterfaceMap(val, []string{ignore})
+	return bot.UploadFileWithResult(url, params, file, fpath)
 }
 
 // SendGenericQuery ...
 func (bot TgBot) SendGenericQuery(path string, ignore string, file string, payload interface{}) ResultWithMessage {
 	url := bot.buildPath(path)
 	switch val := payload.(type) {
-	case SendPhotoIDQuery, SendAudioIDQuery, SendDocumentIDQuery, SendStickerIDQuery, SendVideoIDQuery:
+	// ID
+	case SendPhotoIDQuery:
+		HookPayload(&val, bot.DefaultOptions)
 		return bot.GenericSendPostData(url, val)
-	case SendPhotoPathQuery, SendAudioPathQuery, SendDocumentPathQuery, SendStickerPathQuery, SendVideoPathQuery:
-		ipath, err := reflections.GetField(val, ignore)
-		if err != nil {
-			break
-		}
-		fpath := fmt.Sprintf("%+v", ipath)
-		params := ConvertInterfaceMap(val, []string{ignore})
-		return bot.UploadFileWithResult(url, params, file, fpath)
+	case SendAudioIDQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.GenericSendPostData(url, val)
+	case SendDocumentIDQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.GenericSendPostData(url, val)
+	case SendStickerIDQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.GenericSendPostData(url, val)
+	case SendVideoIDQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.GenericSendPostData(url, val)
+		// Path
+	case SendPhotoPathQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.SendConvertingFile(url, ignore, file, val)
+	case SendAudioPathQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.SendConvertingFile(url, ignore, file, val)
+	case SendDocumentPathQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.SendConvertingFile(url, ignore, file, val)
+	case SendStickerPathQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.SendConvertingFile(url, ignore, file, val)
+	case SendVideoPathQuery:
+		HookPayload(&val, bot.DefaultOptions)
+		return bot.SendConvertingFile(url, ignore, file, val)
 	default:
 		ipath, err := reflections.GetField(val, ignore)
 		if err != nil {
@@ -830,6 +1003,7 @@ func (bot TgBot) SendGenericQuery(path string, ignore string, file string, paylo
 
 // GenericSendPostData ...
 func (bot TgBot) GenericSendPostData(url string, payload interface{}) ResultWithMessage {
+	// hook the payload :P
 	body, error := postPetition(url, payload, nil)
 	if error != nil {
 		errc := 500

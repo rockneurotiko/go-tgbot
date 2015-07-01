@@ -15,6 +15,8 @@ import (
 	"github.com/rockneurotiko/go-tgbot"
 )
 
+var instagramid = ""
+
 var availableCommands = map[string]string{
 	"/start":          "Start the bot!",
 	"/help":           "Get help!!",
@@ -118,7 +120,7 @@ func multiregexHelpHand(bot tgbot.TgBot, msg tgbot.Message, vals []string, kvals
 
 func testGoroutineHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	bot.Answer(msg).Text("Starting").End()
-	bot.SimpleSendMessage(msg, "Starting")
+	// bot.SimpleSendMessage(msg, "Starting")
 	time.Sleep(5000 * time.Millisecond)
 	r := "Ending"
 	return &r
@@ -140,7 +142,7 @@ func showMeHand(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 		ResizeKeyboard:  false,
 		OneTimeKeyboard: true,
 		Selective:       false}
-	bot.Answer(msg).Text("There you have the commands!").Keyboard(rkm).End()
+	bot.Answer(msg).Text("There you have the commands! http://google.com").Keyboard(rkm).End()
 	// bot.SendMessageWithKeyboard(msg.Chat.ID, "There you have the commands!", nil, nil, rkm)
 	return nil
 }
@@ -278,8 +280,7 @@ func sendAction(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 
 func instPic(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	httpClient := http.DefaultClient
-	clientdID := os.Getenv("INSTAGRAM_CLIENT_ID")
-	hexapicAPI := hexapic.NewSearchApi(clientdID, httpClient)
+	hexapicAPI := hexapic.NewSearchApi(instagramid, httpClient)
 	hexapicAPI.Count = 4
 	var imgs []image.Image
 
@@ -306,11 +307,22 @@ func instPic(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	return nil
 }
 
+func answer(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	mytext := "Not implemented yet"
+	return &mytext
+}
+
+func justtest(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	return &text
+}
+
 func main() {
 	godotenv.Load("secrets.env")
 	// Add a file secrets.env, with the key like:
 	// TELEGRAM_KEY=yourtoken
 	token := os.Getenv("TELEGRAM_KEY")
+	instagramid = os.Getenv("INSTAGRAM_CLIENT_ID")
+
 	bot := tgbot.NewTgBot(token).
 		SimpleCommandFn(`sleep`, testGoroutineHand).
 		SimpleCommandFn(`keyboard`, cmdKeyboard).
@@ -336,8 +348,19 @@ func main() {
 		VideoFn(returnVideo).
 		SimpleCommandFn(`sendlocation`, sendLocation).
 		LocationFn(returnLocation).
-		SimpleCommandFn(`sendchataction`, sendAction).
-		SimpleCommandFn(`guessimage`, instPic)
+		SimpleCommandFn(`sendchataction`, sendAction)
+
+	bot.StartChain().
+		SimpleCommandFn(`guessimage`, instPic).
+		SimpleRegexFn(`^(cat|dog|nya|chick)$`, answer).
+		CancelChainCommand(`cancel`, justtest).
+		EndChain()
+
+	bot.DefaultDisableWebpagePreview(true)      // Disable all link preview by default
+	bot.DefaultOneTimeKeyboard(true)            // Enable one time keyboard by default
+	bot.DefaultSelective(true)                  // Use Seletive by default
+	bot.DefaultCleanInitialUsername(true)       // By default is true! (This removes initial @username from messages)
+	bot.DefaultAllowWithoutSlashInMention(true) // By default is true! (This adds the / in the messages that have @username, this needs DefaultCleanInitialUsername true, for example: @username test becomes /test)
 
 	// temp := bot.GetUserProfilePhotos(bot.ID, 1)
 	// fmt.Println(temp)

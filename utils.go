@@ -93,6 +93,87 @@ func ConvertInterfaceMap(p interface{}, except []string) map[string]string {
 	return nint
 }
 
+// HookDisableWebpage ...
+func HookDisableWebpage(payload interface{}, nv *bool) {
+	if nv != nil {
+		has, _ := reflections.HasField(payload, "DisableWebPagePreview")
+		if has {
+			value, _ := reflections.GetField(payload, "DisableWebPagePreview")
+			bvalue := value.(*bool)
+			if bvalue == nil {
+				reflections.SetField(payload, "DisableWebPagePreview", nv)
+			}
+		}
+	}
+}
+
+// HookReplyToMessageID ...
+func HookReplyToMessageID(payload interface{}, nv *bool) {
+	if nv != nil {
+		has, _ := reflections.HasField(payload, "ReplyToMessageID")
+		if has {
+			value, _ := reflections.GetField(payload, "ReplyToMessageID")
+			bvalue := value.(*int)
+			if bvalue == nil {
+				reflections.SetField(payload, "ReplyToMessageID", nv)
+			}
+		}
+	}
+}
+
+// HookSelective ...
+func HookSelective(payload interface{}, nv *bool) {
+	if nv != nil {
+		has, _ := reflections.HasField(payload, "Selective")
+		if has {
+			value, _ := reflections.GetField(payload, "Selective")
+			bvalue := value.(*bool)
+			if bvalue == nil {
+				reflections.SetField(payload, "Selective", nv)
+			}
+		}
+	}
+}
+
+// HookOneTimeKeyboard ...
+func HookOneTimeKeyboard(payload interface{}, nv *bool) {
+	if nv != nil {
+		has, _ := reflections.HasField(payload, "OneTimeKeyboard")
+		if has {
+			value, _ := reflections.GetField(payload, "OneTimeKeyboard")
+			bvalue := value.(*bool)
+			if bvalue == nil {
+				reflections.SetField(payload, "OneTimeKeyboard", nv)
+			}
+		}
+	}
+}
+
+// HookPayload I hate reflection, sorry for that <3
+func HookPayload(payload interface{}, opts DefaultOptionsBot) {
+	HookDisableWebpage(payload, opts.DisableWebURL)
+	// HookReplyToMessageID(payload, opts.ReplyToMessageID)
+
+	has, _ := reflections.HasField(payload, "ReplyMarkup")
+
+	if has {
+		keyint, _ := reflections.GetField(payload, "ReplyMarkup")
+
+		switch val := keyint.(type) {
+		case *ForceReply, *ReplyKeyboardHide:
+			if val != nil {
+				HookSelective(val, opts.Selective)
+			}
+		case *ReplyKeyboardMarkup:
+			if val != nil {
+				HookOneTimeKeyboard(val, opts.OneTimeKeyboard)
+				HookSelective(val, opts.Selective)
+			}
+		default:
+		}
+	}
+}
+
 // SplitResultInMessageError ...
 func SplitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
 	if ressm.Ok && ressm.Result != nil {
