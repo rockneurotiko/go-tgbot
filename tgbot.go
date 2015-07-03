@@ -290,6 +290,60 @@ func (bot *TgBot) LocationFn(f func(TgBot, Message, float64, float64)) *TgBot {
 	return bot
 }
 
+// ReplyFn ...
+func (bot *TgBot) ReplyFn(f func(TgBot, Message, Message)) *TgBot {
+	bot.AddToConditionalFuncs(RepliedConditionalCall{f})
+	return bot
+}
+
+// ForwardFn ...
+func (bot *TgBot) ForwardFn(f func(TgBot, Message, User, int)) *TgBot {
+	bot.AddToConditionalFuncs(ForwardConditionalCall{f})
+	return bot
+}
+
+// GroupFn ..
+func (bot *TgBot) GroupFn(f func(TgBot, Message, int, string)) *TgBot {
+	bot.AddToConditionalFuncs(GroupConditionalCall{f})
+	return bot
+}
+
+// NewParticipantFn ...
+func (bot *TgBot) NewParticipantFn(f func(TgBot, Message, int, User)) *TgBot {
+	bot.AddToConditionalFuncs(NewParticipantConditionalCall{f})
+	return bot
+}
+
+// LeftParticipantFn ...
+func (bot *TgBot) LeftParticipantFn(f func(TgBot, Message, int, User)) *TgBot {
+	bot.AddToConditionalFuncs(LeftParticipantConditionalCall{f})
+	return bot
+}
+
+// NewTitleChatFn ...
+func (bot *TgBot) NewTitleChatFn(f func(TgBot, Message, int, string)) *TgBot {
+	bot.AddToConditionalFuncs(NewTitleConditionalCall{f})
+	return bot
+}
+
+// NewPhotoChatFn ...
+func (bot *TgBot) NewPhotoChatFn(f func(TgBot, Message, int, string)) *TgBot {
+	bot.AddToConditionalFuncs(NewPhotoConditionalCall{f})
+	return bot
+}
+
+// DeleteChatPhotoFn ...
+func (bot *TgBot) DeleteChatPhotoFn(f func(TgBot, Message, int)) *TgBot {
+	bot.AddToConditionalFuncs(DeleteChatPhotoConditionalCall{f})
+	return bot
+}
+
+// GroupChatCreatedFn ...
+func (bot *TgBot) GroupChatCreatedFn(f func(TgBot, Message, int)) *TgBot {
+	bot.AddToConditionalFuncs(GroupChatCreatedConditionalCall{f})
+	return bot
+}
+
 // AnyMsgFn ...
 func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
 	bot.AddToConditionalFuncs(CustomCall{AlwaysReturnTrue, f})
@@ -397,23 +451,40 @@ func (bot *TgBot) StartWithChannel(ch chan Message) {
 }
 
 // ServerStart ...
-func (bot *TgBot) ServerStart(url string, path string) {
+// func (bot *TgBot) ServerStart(url string, path string) {
+// 	res, error := bot.SetWebhook(url)
+// 	if error != nil {
+// 		ec := res.ErrorCode
+// 		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+// 		return
+// 	}
+// 	ch := bot.GetMessageChannel()
+// 	m := martini.Classic()
+// 	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
+// 		ch <- msg
+// 	})
+
+// 	http.Handle("/", m)
+// }
+
+// ConfigureWebhook ...
+func (bot *TgBot) ConfigureWebhook(url string, path string) (*martini.ClassicMartini, error) {
 	res, error := bot.SetWebhook(url)
 	if error != nil {
 		ec := res.ErrorCode
-		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
-		return
+		msg := fmt.Sprintf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+		return nil, errors.New(msg)
 	}
 	ch := bot.GetMessageChannel()
 	m := martini.Classic()
 	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
 		ch <- msg
 	})
-	http.Handle("/", m)
+	return m, nil
 }
 
-// StartWebhookEditMartini ...
-func (bot *TgBot) StartWebhookEditMartini(url string, path string, f func(*martini.ClassicMartini) *martini.ClassicMartini) {
+// StartServerEditMartini ...
+func (bot *TgBot) StartServerEditMartini(url string, path string, f func(*martini.ClassicMartini) *martini.ClassicMartini) {
 	res, error := bot.SetWebhook(url)
 	if error != nil {
 		ec := res.ErrorCode

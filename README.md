@@ -239,7 +239,7 @@ See the [manualexample/main.go file](https://github.com/rockneurotiko/go-tgbot/b
 
 You are welcome to help in building this project :smile: &lt;3
 
-- [ ] Callback functions
+- [x] Callback functions
   - [x] Simple command
   - [x] Command with parameters
   - [x] Multiple commands
@@ -253,15 +253,15 @@ You are welcome to help in building this project :smile: &lt;3
   - [x] On document
   - [x] On video
   - [x] On location
-  - [ ] On message replied
-  - [ ] On message forwarded
-  - [ ] On any group event
-  - [ ] On new chat participant
-  - [ ] On left chat participant
-  - [ ] On new chat title
-  - [ ] On new chat photo
-  - [ ] On delete chat photo
-  - [ ] On group chat created
+  - [x] On message replied
+  - [x] On message forwarded
+  - [x] On any group event
+  - [x] On new chat participant
+  - [x] On left chat participant
+  - [x] On new chat title
+  - [x] On new chat photo
+  - [x] On delete chat photo
+  - [x] On group chat created
 
 - [x] Action functions
   - [x] Get me
@@ -330,6 +330,7 @@ You are welcome to help in building this project :smile: &lt;3
   - [ ] Webhook
   - [ ] Chain messages
   - [ ] Default options
+  - [ ] Call from ReplyFn
 
 - [ ] Tests
 

@@ -17,6 +17,16 @@ type CustomCall struct {
 	f         func(TgBot, Message)
 }
 
+// canCall ...
+func (cc CustomCall) canCall(bot TgBot, msg Message) bool {
+	return cc.condition(bot, msg)
+}
+
+// call ...
+func (cc CustomCall) call(bot TgBot, msg Message) {
+	cc.f(bot, msg)
+}
+
 // Custom functions for CustomCall :)
 
 // AlwaysReturnTrue ...
@@ -127,16 +137,6 @@ func (icc ImageConditionalCall) call(bot TgBot, msg Message) {
 	icc.f(bot, msg, photos, photoid)
 }
 
-// canCall ...
-func (cc CustomCall) canCall(bot TgBot, msg Message) bool {
-	return cc.condition(bot, msg)
-}
-
-// call ...
-func (cc CustomCall) call(bot TgBot, msg Message) {
-	cc.f(bot, msg)
-}
-
 // AudioConditionalCall ...
 type AudioConditionalCall struct {
 	f func(TgBot, Message, Audio, string)
@@ -230,6 +230,183 @@ func (icc LocationConditionalCall) call(bot TgBot, msg Message) {
 	}
 	location := *msg.Location
 	icc.f(bot, msg, location.Latitude, location.Longitude)
+}
+
+// RepliedConditionalCall ...
+type RepliedConditionalCall struct {
+	f func(TgBot, Message, Message)
+}
+
+// canCall ...
+func (rcc RepliedConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.ReplyToMessage != nil
+}
+
+// call ...
+func (rcc RepliedConditionalCall) call(bot TgBot, msg Message) {
+	if msg.ReplyToMessage == nil {
+		return
+	}
+	newmsg := *msg.ReplyToMessage
+	rcc.f(bot, msg, newmsg)
+}
+
+// ForwardConditionalCall ...
+type ForwardConditionalCall struct {
+	f func(TgBot, Message, User, int)
+}
+
+// canCall ...
+func (fcc ForwardConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.ForwardFrom != nil && msg.ForwardDate != nil
+}
+
+// call ...
+func (fcc ForwardConditionalCall) call(bot TgBot, msg Message) {
+	if !fcc.canCall(bot, msg) {
+		return
+	}
+	from := *msg.ForwardFrom
+	dat := *msg.ForwardDate
+	fcc.f(bot, msg, from, dat)
+}
+
+// GroupConditionalCall ...
+type GroupConditionalCall struct {
+	f func(TgBot, Message, int, string)
+}
+
+// canCall ...
+func (gcc GroupConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Chat.ID < 0 && msg.Chat.Title != nil
+}
+
+// call ...
+func (gcc GroupConditionalCall) call(bot TgBot, msg Message) {
+	if !gcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	dat := *msg.Chat.Title
+	gcc.f(bot, msg, from, dat)
+}
+
+// NewParticipantConditionalCall ...
+type NewParticipantConditionalCall struct {
+	f func(TgBot, Message, int, User)
+}
+
+// canCall ...
+func (npcc NewParticipantConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.NewChatParticipant != nil
+}
+
+// call ...
+func (npcc NewParticipantConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	who := *msg.NewChatParticipant
+	npcc.f(bot, msg, from, who)
+}
+
+// LeftParticipantConditionalCall ...
+type LeftParticipantConditionalCall struct {
+	f func(TgBot, Message, int, User)
+}
+
+// canCall ...
+func (npcc LeftParticipantConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.LeftChatParticipant != nil
+}
+
+// call ...
+func (npcc LeftParticipantConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	who := *msg.LeftChatParticipant
+	npcc.f(bot, msg, from, who)
+}
+
+// NewTitleConditionalCall ...
+type NewTitleConditionalCall struct {
+	f func(TgBot, Message, int, string)
+}
+
+// canCall ...
+func (npcc NewTitleConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.NewChatTitle != nil
+}
+
+// call ...
+func (npcc NewTitleConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	what := *msg.NewChatTitle
+	npcc.f(bot, msg, from, what)
+}
+
+// NewPhotoConditionalCall ...
+type NewPhotoConditionalCall struct {
+	f func(TgBot, Message, int, string)
+}
+
+// canCall ...
+func (npcc NewPhotoConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.NewChatPhoto != nil
+}
+
+// call ...
+func (npcc NewPhotoConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	what := *msg.NewChatPhoto
+	npcc.f(bot, msg, from, what)
+}
+
+// DeleteChatPhotoConditionalCall ...
+type DeleteChatPhotoConditionalCall struct {
+	f func(TgBot, Message, int)
+}
+
+// canCall ...
+func (npcc DeleteChatPhotoConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.DeleteChatPhoto != nil
+}
+
+// call ...
+func (npcc DeleteChatPhotoConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	npcc.f(bot, msg, from)
+}
+
+// GroupChatCreatedConditionalCall ...
+type GroupChatCreatedConditionalCall struct {
+	f func(TgBot, Message, int)
+}
+
+// canCall ...
+func (npcc GroupChatCreatedConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.GroupChatCreated != nil
+}
+
+// call ...
+func (npcc GroupChatCreatedConditionalCall) call(bot TgBot, msg Message) {
+	if !npcc.canCall(bot, msg) {
+		return
+	}
+	from := msg.Chat.ID
+	npcc.f(bot, msg, from)
 }
 
 // TextConditionalCall ...

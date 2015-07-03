@@ -364,8 +364,12 @@ func main() {
 
 	// temp := bot.GetUserProfilePhotos(bot.ID, 1)
 	// fmt.Println(temp)
-	// res, _ := bot.SetWebhook()
-	// fmt.Println(res)
+	// m, _ := bot.ConfigureWebhook("url", "path")
+	// http.Handle("/", m)
+	// if err := http.ListenAndServe(bind, nil); err != nil {
+	// 	log.Fatal(err)
+	// }
+
 	bot.SimpleStart()
 
 	// bot := tgbot.NewTgBot(token)
