@@ -11,12 +11,12 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	"github.com/codegangsta/martini"
 	"github.com/codegangsta/martini-contrib/binding"
@@ -451,53 +451,39 @@ func (bot *TgBot) StartWithChannel(ch chan Message) {
 }
 
 // ServerStart ...
-// func (bot *TgBot) ServerStart(url string, path string) {
-// 	res, error := bot.SetWebhook(url)
-// 	if error != nil {
-// 		ec := res.ErrorCode
-// 		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
-// 		return
-// 	}
-// 	ch := bot.GetMessageChannel()
-// 	m := martini.Classic()
-// 	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
-// 		ch <- msg
-// 	})
-
-// 	http.Handle("/", m)
-// }
-
-// ConfigureWebhook ...
-func (bot *TgBot) ConfigureWebhook(url string, path string) (*martini.ClassicMartini, error) {
-	res, error := bot.SetWebhook(url)
-	if error != nil {
-		ec := res.ErrorCode
-		msg := fmt.Sprintf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
-		return nil, errors.New(msg)
-	}
-	ch := bot.GetMessageChannel()
-	m := martini.Classic()
-	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
-		ch <- msg
-	})
-	return m, nil
-}
-
-// StartServerEditMartini ...
-func (bot *TgBot) StartServerEditMartini(url string, path string, f func(*martini.ClassicMartini) *martini.ClassicMartini) {
-	res, error := bot.SetWebhook(url)
-	if error != nil {
-		ec := res.ErrorCode
-		fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+func (bot *TgBot) ServerStart(uri string, pathl string) {
+	tokendiv := strings.Split(bot.Token, ":")
+	if len(tokendiv) != 2 {
 		return
 	}
+	pathl = path.Join(pathl, fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1]))
+	fmt.Println(pathl)
+	// fmt.Println(pathl)
+	if uri != "" {
+		puri, err := url.Parse(uri)
+		if err != nil {
+			fmt.Printf("Bad URL %s", uri)
+			return
+		}
+		nuri, _ := puri.Parse(pathl)
+		res, error := bot.SetWebhook(nuri.String())
+		if error != nil {
+			ec := res.ErrorCode
+			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+			return
+		}
+	}
+
 	ch := bot.GetMessageChannel()
 	m := martini.Classic()
-	m = f(m)
-	m.Post(path, binding.Bind(Message{}), func(c context.Context, msg Message) {
-		ch <- msg
+	m.Post(pathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
+		// fmt.Println(msg)
+		if msg.UpdateID > 0 && msg.Msg.ID > 0 {
+			ch <- msg.Msg
+		}
 	})
-	http.Handle("/", m)
+
+	m.Run()
 }
 
 // GetMessageChannel ...
@@ -519,13 +505,19 @@ func (bot *TgBot) Start() {
 		return
 	}
 
+	removedhook := false
 	i := 0
 	for {
 		i = i + 1
-		fmt.Println(i)
+		// fmt.Println(i)
 		updatesList, err := bot.GetUpdates()
 		if err != nil {
 			fmt.Println(err)
+			if !removedhook {
+				fmt.Println("Removing webhook...")
+				bot.SetWebhook("")
+				removedhook = true
+			}
 			continue
 		}
 		bot.ProcessMessages(updatesList)
