@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/codegangsta/martini"
+	"github.com/codegangsta/martini-contrib/binding"
 	"github.com/fatih/camelcase"
 	"github.com/oleiade/reflections"
 	"github.com/parnurzeal/gorequest"
@@ -172,6 +176,50 @@ func HookPayload(payload interface{}, opts DefaultOptionsBot) {
 		default:
 		}
 	}
+}
+
+// StartServerMultiplesBots ...
+func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
+	var puri *url.URL
+	if uri != "" {
+		tmpuri, err := url.Parse(uri)
+		if err != nil {
+			fmt.Printf("Bad URL %s", uri)
+			return
+		}
+		puri = tmpuri
+	}
+
+	m := martini.Classic()
+	for _, bot := range bots {
+		tokendiv := strings.Split(bot.Token, ":")
+		if len(tokendiv) != 2 {
+			return
+		}
+		botpathl := path.Join(pathl, fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1]))
+
+		nuri, _ := puri.Parse(botpathl)
+		remoteuri := nuri.String()
+		res, error := bot.SetWebhook(remoteuri)
+
+		fmt.Println("URLLL: ", remoteuri)
+		fmt.Println("PATHHH: ", botpathl)
+
+		if error != nil {
+			ec := res.ErrorCode
+			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+			continue
+		}
+
+		ch := bot.GetMessageChannel()
+		m.Post(botpathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
+			// fmt.Println(msg)
+			if msg.UpdateID > 0 && msg.Msg.ID > 0 {
+				ch <- msg.Msg
+			}
+		})
+	}
+	m.Run()
 }
 
 // SplitResultInMessageError ...
