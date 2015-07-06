@@ -202,9 +202,6 @@ func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
 		remoteuri := nuri.String()
 		res, error := bot.SetWebhook(remoteuri)
 
-		fmt.Println("URLLL: ", remoteuri)
-		fmt.Println("PATHHH: ", botpathl)
-
 		if error != nil {
 			ec := res.ErrorCode
 			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
