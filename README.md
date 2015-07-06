@@ -1,4 +1,4 @@
-# go-tgbot
+# Telegram Bot API library! [![GoDoc](https://godoc.org/github.com/rockneurotiko/go-tgbot?status.png)](http://godoc.org/github.com/rockneurotiko/go-tgbot)
 Telegram API bot wrapper for Go Language! &lt;3
 
 This is a beauty way to build telegram bots with Go language.
