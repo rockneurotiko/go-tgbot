@@ -34,8 +34,7 @@ func convertToCommand(reg string) string {
 	return reg
 }
 
-// FindStringSubmatchMap ...
-func FindStringSubmatchMap(r *regexp.Regexp, s string) map[string]string {
+func findStringSubmatchMap(r *regexp.Regexp, s string) map[string]string {
 	captures := make(map[string]string)
 	match := r.FindStringSubmatch(s)
 	if match == nil {
@@ -51,8 +50,7 @@ func FindStringSubmatchMap(r *regexp.Regexp, s string) map[string]string {
 	return captures
 }
 
-// LooksLikePath ...
-func LooksLikePath(p string) bool {
+func looksLikePath(p string) bool {
 	p = filepath.Clean(p)
 	if len(strings.Split(p, ".")) > 1 {
 		// The IDS don't have dots :P
@@ -63,26 +61,23 @@ func LooksLikePath(p string) bool {
 	return false
 }
 
-// IsZeroOfUnderlyingType ...
-func IsZeroOfUnderlyingType(x interface{}) bool {
+func isZeroOfUnderlyingType(x interface{}) bool {
 	return x == reflect.Zero(reflect.TypeOf(x)).Interface()
 }
 
-// IsInList ...
-func IsInList(v string, l []string) bool {
+func isInList(v string, l []string) bool {
 	sort.Strings(l)
 	i := sort.SearchStrings(l, v)
 	return i < len(l) && l[i] == v
 }
 
-// ConvertInterfaceMap ...
-func ConvertInterfaceMap(p interface{}, except []string) map[string]string {
+func convertInterfaceMap(p interface{}, except []string) map[string]string {
 	nint := map[string]string{}
 	var structItems map[string]interface{}
 
 	structItems, _ = reflections.Items(p)
 	for v, v2 := range structItems {
-		if IsZeroOfUnderlyingType(v2) || IsInList(v, except) {
+		if isZeroOfUnderlyingType(v2) || isInList(v, except) {
 			continue
 		}
 		v = strings.ToLower(strings.Join(camelcase.Split(v), "_"))
@@ -97,89 +92,9 @@ func ConvertInterfaceMap(p interface{}, except []string) map[string]string {
 	return nint
 }
 
-// HookDisableWebpage ...
-func HookDisableWebpage(payload interface{}, nv *bool) {
-	if nv != nil {
-		has, _ := reflections.HasField(payload, "DisableWebPagePreview")
-		if has {
-			value, _ := reflections.GetField(payload, "DisableWebPagePreview")
-			bvalue := value.(*bool)
-			if bvalue == nil {
-				reflections.SetField(payload, "DisableWebPagePreview", nv)
-			}
-		}
-	}
-}
-
-// HookReplyToMessageID ...
-func HookReplyToMessageID(payload interface{}, nv *bool) {
-	if nv != nil {
-		has, _ := reflections.HasField(payload, "ReplyToMessageID")
-		if has {
-			value, _ := reflections.GetField(payload, "ReplyToMessageID")
-			bvalue := value.(*int)
-			if bvalue == nil {
-				reflections.SetField(payload, "ReplyToMessageID", nv)
-			}
-		}
-	}
-}
-
-// HookSelective ...
-func HookSelective(payload interface{}, nv *bool) {
-	if nv != nil {
-		has, _ := reflections.HasField(payload, "Selective")
-		if has {
-			value, _ := reflections.GetField(payload, "Selective")
-			bvalue := value.(*bool)
-			if bvalue == nil {
-				reflections.SetField(payload, "Selective", nv)
-			}
-		}
-	}
-}
-
-// HookOneTimeKeyboard ...
-func HookOneTimeKeyboard(payload interface{}, nv *bool) {
-	if nv != nil {
-		has, _ := reflections.HasField(payload, "OneTimeKeyboard")
-		if has {
-			value, _ := reflections.GetField(payload, "OneTimeKeyboard")
-			bvalue := value.(*bool)
-			if bvalue == nil {
-				reflections.SetField(payload, "OneTimeKeyboard", nv)
-			}
-		}
-	}
-}
-
-// HookPayload I hate reflection, sorry for that <3
-func HookPayload(payload interface{}, opts DefaultOptionsBot) {
-	HookDisableWebpage(payload, opts.DisableWebURL)
-	// HookReplyToMessageID(payload, opts.ReplyToMessageID)
-
-	has, _ := reflections.HasField(payload, "ReplyMarkup")
-
-	if has {
-		keyint, _ := reflections.GetField(payload, "ReplyMarkup")
-
-		switch val := keyint.(type) {
-		case *ForceReply, *ReplyKeyboardHide:
-			if val != nil {
-				HookSelective(val, opts.Selective)
-			}
-		case *ReplyKeyboardMarkup:
-			if val != nil {
-				HookOneTimeKeyboard(val, opts.OneTimeKeyboard)
-				HookSelective(val, opts.Selective)
-			}
-		default:
-		}
-	}
-}
-
 // StartServerMultiplesBots ...
 func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
+	// change this to start only one POST and have a map
 	var puri *url.URL
 	if uri != "" {
 		tmpuri, err := url.Parse(uri)
@@ -212,15 +127,14 @@ func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
 		m.Post(botpathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
 			// fmt.Println(msg)
 			if msg.UpdateID > 0 && msg.Msg.ID > 0 {
-				ch <- msg.Msg
+				ch <- msg
 			}
 		})
 	}
 	m.Run()
 }
 
-// SplitResultInMessageError ...
-func SplitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
+func splitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
 	if ressm.Ok && ressm.Result != nil {
 		res = *ressm.Result
 		err = nil
@@ -231,7 +145,6 @@ func SplitResultInMessageError(ressm ResultWithMessage) (res Message, err error)
 	return
 }
 
-// postPetition ...
 func postPetition(url string, payload interface{}, ctype *string) (string, error) {
 	request := gorequest.New().Post(url).
 		Send(payload)
@@ -248,7 +161,6 @@ func postPetition(url string, payload interface{}, ctype *string) (string, error
 	return body, nil
 }
 
-// getPetition ...
 func getPetition(url string, queries []string) (string, error) {
 	req := gorequest.New().Get(url)
 

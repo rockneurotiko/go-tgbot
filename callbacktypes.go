@@ -456,7 +456,7 @@ func (rc RegexCommand) canCall(text string) bool {
 // call ...
 func (rc RegexCommand) call(bot TgBot, msg Message, text string) {
 	vals := rc.Regex.FindStringSubmatch(text)
-	kvals := FindStringSubmatchMap(rc.Regex, text)
+	kvals := findStringSubmatchMap(rc.Regex, text)
 
 	res := rc.f(bot, msg, vals, kvals)
 	if res != nil && *res != "" {
@@ -496,7 +496,7 @@ func (rc MultiRegexCommand) call(bot TgBot, msg Message, text string) {
 		return
 	}
 	vals := regexToUse.FindStringSubmatch(text)
-	kvals := FindStringSubmatchMap(regexToUse, text)
+	kvals := findStringSubmatchMap(regexToUse, text)
 
 	res := rc.f(bot, msg, vals, kvals)
 	if res != nil && *res != "" {
