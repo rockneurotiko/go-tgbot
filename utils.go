@@ -18,7 +18,7 @@ import (
 	"github.com/fatih/camelcase"
 	"github.com/martini-contrib/gorelic"
 	"github.com/oleiade/reflections"
-	"github.com/parnurzeal/gorequest"
+	"github.com/rockneurotiko/gorequest"
 )
 
 func convertToCommand(reg string) string {
@@ -204,7 +204,7 @@ func splitResultInMessageError(ressm ResultWithMessage) (res Message, err error)
 }
 
 func postPetition(url string, payload interface{}, ctype *string) (string, error) {
-	request := gorequest.New().Post(url).
+	request := gorequest.New().DisableKeepAlives(true).Post(url).
 		Send(payload)
 	request.TargetType = "form"
 
@@ -213,6 +213,7 @@ func postPetition(url string, payload interface{}, ctype *string) (string, error
 	}
 
 	_, body, err := request.End()
+
 	if err != nil {
 		return "", errors.New("Some error happened")
 	}
@@ -220,7 +221,7 @@ func postPetition(url string, payload interface{}, ctype *string) (string, error
 }
 
 func getPetition(url string, queries []string) (string, error) {
-	req := gorequest.New().Get(url)
+	req := gorequest.New().DisableKeepAlives(true).Get(url)
 
 	for _, q := range queries {
 		req.Query(q)

@@ -2,6 +2,7 @@ package tgbot
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"net/url"
 	"path"
@@ -55,7 +56,7 @@ type TgBot struct {
 	Username             string
 	BaseRequestURL       string
 	MainListener         chan MessageWithUpdateID
-	LastUpdateID         int
+	LastUpdateID         int64
 	TestConditionalFuncs []ConditionCallStructure
 	ChainConditionals    []*ChainStructure
 	BuildingChain        bool
@@ -65,9 +66,10 @@ type TgBot struct {
 // ProcessAllMsg default message handler that take care of clean the messages, the chains and the action functions.
 func (bot TgBot) ProcessAllMsg(msg Message) {
 	msg = bot.cleanMessage(msg)
-
+	// Let's try with and without goroutines here
 	for _, c := range bot.ChainConditionals {
 		if c.canCall(bot, msg) {
+			// c.call(bot, msg)
 			go c.call(bot, msg)
 			return
 		}
@@ -78,13 +80,14 @@ func (bot TgBot) ProcessAllMsg(msg Message) {
 
 	for _, v := range bot.TestConditionalFuncs {
 		if v.canCall(bot, msg) {
+			// v.call(bot, msg)
 			go v.call(bot, msg)
 		}
 	}
 }
 
 // MessagesHandler is the default listener, just listen for a channel and call the default message processor
-func (bot *TgBot) MessagesHandler(Incoming <-chan MessageWithUpdateID) {
+func (bot TgBot) MessagesHandler(Incoming <-chan MessageWithUpdateID) {
 	for {
 		input := <-Incoming
 		go bot.ProcessAllMsg(input.Msg) // go this or not?
@@ -94,10 +97,11 @@ func (bot *TgBot) MessagesHandler(Incoming <-chan MessageWithUpdateID) {
 // ProcessMessages will take care about the highest message ID to get updates in the right way. This will call the MainListener channel with a MessageWithUpdateID
 func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	for _, msg := range messages {
-		if msg.UpdateID > bot.LastUpdateID {
-			// Add lock
-			bot.LastUpdateID = msg.UpdateID
-		}
+		// if int64(msg.UpdateID) > bot.LastUpdateID {
+		// 	// Add lock
+		// 	bot.LastUpdateID = int64(msg.UpdateID)
+		// }
+		atomic.CompareAndSwapInt64(&bot.LastUpdateID, bot.LastUpdateID, int64(msg.UpdateID))
 		if bot.MainListener != nil {
 			bot.MainListener <- msg
 		}
@@ -152,6 +156,7 @@ func (bot *TgBot) Start() {
 	for {
 		// i = i + 1
 		// fmt.Println(i)
+
 		updatesList, err := bot.GetUpdates()
 		if err != nil {
 			fmt.Println(err)
@@ -162,6 +167,7 @@ func (bot *TgBot) Start() {
 			}
 			continue
 		}
+
 		bot.ProcessMessages(updatesList)
 	}
 }
