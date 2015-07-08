@@ -16,6 +16,7 @@ import (
 	"github.com/codegangsta/martini"
 	"github.com/codegangsta/martini-contrib/binding"
 	"github.com/fatih/camelcase"
+	"github.com/martini-contrib/gorelic"
 	"github.com/oleiade/reflections"
 	"github.com/parnurzeal/gorequest"
 )
@@ -93,8 +94,7 @@ func convertInterfaceMap(p interface{}, except []string) map[string]string {
 }
 
 // StartServerMultiplesBots ...
-func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
-	// change this to start only one POST and have a map
+func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ...*TgBot) {
 	var puri *url.URL
 	if uri != "" {
 		tmpuri, err := url.Parse(uri)
@@ -105,13 +105,15 @@ func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
 		puri = tmpuri
 	}
 
-	m := martini.Classic()
+	botsmap := make(map[string]*TgBot)
 	for _, bot := range bots {
 		tokendiv := strings.Split(bot.Token, ":")
 		if len(tokendiv) != 2 {
 			return
 		}
-		botpathl := path.Join(pathl, fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1]))
+
+		tokenpath := fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1])
+		botpathl := path.Join(pathl, tokenpath)
 
 		nuri, _ := puri.Parse(botpathl)
 		remoteuri := nuri.String()
@@ -123,16 +125,72 @@ func StartServerMultiplesBots(uri string, pathl string, bots ...*TgBot) {
 			continue
 		}
 
-		ch := bot.GetMessageChannel()
-		m.Post(botpathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
-			// fmt.Println(msg)
-			if msg.UpdateID > 0 && msg.Msg.ID > 0 {
-				ch <- msg
-			}
-		})
+		bot.StartMainListener()
+		botsmap[tokenpath] = bot
 	}
+
+	pathtolisten := path.Join(pathl, "(?P<token>[a-zA-Z0-9-]+)")
+
+	m := martini.Classic()
+	m.Post(pathtolisten, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
+		bot, ok := botsmap[params["token"]]
+
+		if ok && msg.UpdateID > 0 && msg.Msg.ID > 0 {
+			bot.MainListener <- msg
+		} else {
+			fmt.Println("Someone tried with: ", params["token"], msg)
+		}
+	})
+
+	if newrelic != "" {
+		gorelic.InitNewrelicAgent(newrelic, "TgBot Relic", true)
+		m.Use(gorelic.Handler)
+	}
+
 	m.Run()
 }
+
+// StartServerMultiplesBots ...
+// func OtherMultipleStart(uri string, pathl string, bots ...*TgBot) {
+// 	// change this to start only one POST and have a map
+// 	var puri *url.URL
+// 	if uri != "" {
+// 		tmpuri, err := url.Parse(uri)
+// 		if err != nil {
+// 			fmt.Printf("Bad URL %s", uri)
+// 			return
+// 		}
+// 		puri = tmpuri
+// 	}
+
+// 	m := martini.Classic()
+// 	for _, bot := range bots {
+// 		tokendiv := strings.Split(bot.Token, ":")
+// 		if len(tokendiv) != 2 {
+// 			return
+// 		}
+// 		botpathl := path.Join(pathl, fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1]))
+
+// 		nuri, _ := puri.Parse(botpathl)
+// 		remoteuri := nuri.String()
+// 		res, error := bot.SetWebhook(remoteuri)
+
+// 		if error != nil {
+// 			ec := res.ErrorCode
+// 			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
+// 			continue
+// 		}
+
+// 		ch := bot.GetMessageChannel()
+// 		m.Post(botpathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
+// 			// fmt.Println(msg)
+// 			if msg.UpdateID > 0 && msg.Msg.ID > 0 {
+// 				ch <- msg
+// 			}
+// 		})
+// 	}
+// 	m.Run()
+// }
 
 func splitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
 	if ressm.Ok && ressm.Result != nil {

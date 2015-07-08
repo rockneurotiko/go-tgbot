@@ -95,6 +95,7 @@ func (bot *TgBot) MessagesHandler(Incoming <-chan MessageWithUpdateID) {
 func (bot *TgBot) ProcessMessages(messages []MessageWithUpdateID) {
 	for _, msg := range messages {
 		if msg.UpdateID > bot.LastUpdateID {
+			// Add lock
 			bot.LastUpdateID = msg.UpdateID
 		}
 		if bot.MainListener != nil {
