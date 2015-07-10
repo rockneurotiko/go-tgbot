@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/gif"
 	"image/jpeg"
 	"io"
 	"io/ioutil"
@@ -121,9 +122,16 @@ func (bot TgBot) uploadFile(url string, params map[string]string, fieldname stri
 		if _, err = io.Copy(fw, f); err != nil {
 			return ResultWithMessage{}, err
 		}
+	case *gif.GIF:
+		if fw, err = w.CreateFormFile("document", "image.gif"); err != nil {
+			return ResultWithMessage{}, err
+		}
+		if err = gif.EncodeAll(fw, rfile); err != nil {
+			return ResultWithMessage{}, err
+		}
 	case image.Image:
-		var imageQuality = jpeg.Options{Quality: jpeg.DefaultQuality}
-		if fw, err = w.CreateFormFile("photo", "image.jpg"); err != nil {
+		imageQuality := jpeg.Options{Quality: jpeg.DefaultQuality}
+		if fw, err = w.CreateFormFile("photo", "image.jpeg"); err != nil {
 			return ResultWithMessage{}, err
 		}
 		if err = jpeg.Encode(fw, rfile, &imageQuality); err != nil {

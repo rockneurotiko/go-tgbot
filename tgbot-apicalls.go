@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/gif"
 	"strings"
 )
 
@@ -299,12 +300,61 @@ func (bot TgBot) SendDocumentWithKeyboardHide(cid int, document string, rmi *int
 }
 
 // SendDocument full function to send document, uses the reply markup interface.
-func (bot TgBot) SendDocument(cid int, document string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendDocumentIDQuery{cid, document, rmi, rm}
-	if looksLikePath(document) {
-		payload = SendDocumentPathQuery{cid, document, rmi, rm}
+func (bot TgBot) SendDocument(cid int, document interface{}, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	payload, err := bot.documentInterfaceToType(cid, document, rmi, rm)
+	if err != nil {
+		errc := 500
+		errs := err.Error()
+		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
+	}
+	// var payload interface{} = SendDocumentIDQuery{cid, document, rmi, rm}
+	// if looksLikePath(document) {
+	// 	payload = SendDocumentPathQuery{cid, document, rmi, rm}
+	// }
+	return bot.SendDocumentQuery(payload)
+}
+
+func (bot TgBot) SendDocumentImageTest(cid int, payload interface{}) ResultWithMessage {
+	payload, err := bot.documentInterfaceToType(cid, payload, nil, nil)
+	if err != nil {
+		errc := 500
+		errs := err.Error()
+		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
 	}
 	return bot.SendDocumentQuery(payload)
+}
+
+func (bot TgBot) documentInterfaceToType(cid int, photo interface{}, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
+	switch pars := photo.(type) {
+	case string:
+		payload = SendDocumentIDQuery{cid, pars, rmi, rm}
+		if looksLikePath(pars) {
+			payload = SendDocumentPathQuery{cid, pars, rmi, rm}
+		}
+	case image.Image:
+		{
+			mp := struct {
+				ChatID           int             `json:"chat_id"`
+				Document         image.Image     `json:"document"`
+				ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+				ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+			}{cid, pars, rmi, rm}
+			hookPayload(&mp, bot.DefaultOptions)
+			payload = mp
+		}
+	case *gif.GIF:
+		mp := struct {
+			ChatID           int             `json:"chat_id"`
+			Document         *gif.GIF        `json:"document"`
+			ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+			ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+		}{cid, pars, rmi, rm}
+		hookPayload(&mp, bot.DefaultOptions)
+		payload = mp
+	default:
+		err = errors.New("No struct interface detected")
+	}
+	return
 }
 
 // SendDocumentQuery full function using the query.

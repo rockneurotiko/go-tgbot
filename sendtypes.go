@@ -28,7 +28,7 @@ func (s *Send) Audio(audio string) *SendAudio {
 }
 
 // Document return a SendDocument instance to chain actions easy
-func (s *Send) Document(doc string) *SendDocument {
+func (s *Send) Document(doc interface{}) *SendDocument {
 	return &SendDocument{s, doc, nil, nil}
 }
 
@@ -208,7 +208,7 @@ func (sp SendAudio) End() ResultWithMessage {
 // SendDocument ...
 type SendDocument struct {
 	Send             *Send
-	Document         string
+	Document         interface{}
 	ReplyToMessageID *int
 	ReplyMarkup      *ReplyMarkupInt
 }
