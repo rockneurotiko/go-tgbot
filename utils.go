@@ -143,7 +143,7 @@ func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ..
 	})
 
 	if newrelic != "" {
-		gorelic.InitNewrelicAgent(newrelic, "TgBot Relic", true)
+		gorelic.InitNewrelicAgent(newrelic, "TgBot Relic", false)
 		m.Use(gorelic.Handler)
 	}
 
