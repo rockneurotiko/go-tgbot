@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/codegangsta/martini"
-	"github.com/codegangsta/martini-contrib/binding"
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 	"github.com/fatih/camelcase"
 	"github.com/martini-contrib/gorelic"
 	"github.com/oleiade/reflections"
