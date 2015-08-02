@@ -24,7 +24,7 @@ func (s *Send) Photo(photo interface{}) *SendPhoto {
 
 // Audio return a SendAudio instance to chain actions easy
 func (s *Send) Audio(audio string) *SendAudio {
-	return &SendAudio{s, audio, nil, nil, nil}
+	return &SendAudio{s, audio, nil, nil}
 }
 
 // Document return a SendDocument instance to chain actions easy
@@ -39,7 +39,7 @@ func (s *Send) Sticker(stick interface{}) *SendSticker {
 
 // Video return a SendVideo instance to chain actions easy
 func (s *Send) Video(vid string) *SendVideo {
-	return &SendVideo{s, vid, nil, nil}
+	return &SendVideo{s, vid, nil, nil, nil, nil}
 }
 
 // Location return a SendLocation instance to chain actions easy
@@ -162,15 +162,8 @@ func (sp SendPhoto) End() ResultWithMessage {
 type SendAudio struct {
 	Send             *Send
 	Photo            string
-	CaptionField     *string
 	ReplyToMessageID *int
 	ReplyMarkup      *ReplyMarkupInt
-}
-
-// Caption ...
-func (sp *SendAudio) Caption(caption string) *SendAudio {
-	sp.CaptionField = &caption
-	return sp
 }
 
 // ReplyToMessage ...
@@ -202,7 +195,7 @@ func (sp *SendAudio) ForceReply(fr ForceReply) *SendAudio {
 
 // End ...
 func (sp SendAudio) End() ResultWithMessage {
-	return sp.Send.Bot.SendAudio(sp.Send.ChatID, sp.Photo, sp.CaptionField, sp.ReplyToMessageID, sp.ReplyMarkup)
+	return sp.Send.Bot.SendAudio(sp.Send.ChatID, sp.Photo, sp.ReplyToMessageID, sp.ReplyMarkup)
 }
 
 // SendDocument ...
@@ -289,6 +282,8 @@ func (sp SendSticker) End() ResultWithMessage {
 type SendVideo struct {
 	Send             *Send
 	Video            string
+	CaptionField     *string
+	DurationField    *int
 	ReplyToMessageID *int
 	ReplyMarkup      *ReplyMarkupInt
 }
@@ -296,6 +291,18 @@ type SendVideo struct {
 // ReplyToMessage ...
 func (sp *SendVideo) ReplyToMessage(rm int) *SendVideo {
 	sp.ReplyToMessageID = &rm
+	return sp
+}
+
+// Caption ...
+func (sp *SendVideo) Caption(cap string) *SendVideo {
+	sp.CaptionField = &cap
+	return sp
+}
+
+// Duration ...
+func (sp *SendVideo) Duration(dur int) *SendVideo {
+	sp.DurationField = &dur
 	return sp
 }
 
@@ -322,7 +329,7 @@ func (sp *SendVideo) ForceReply(fr ForceReply) *SendVideo {
 
 // End ...
 func (sp SendVideo) End() ResultWithMessage {
-	return sp.Send.Bot.SendVideo(sp.Send.ChatID, sp.Video, sp.ReplyToMessageID, sp.ReplyMarkup)
+	return sp.Send.Bot.SendVideo(sp.Send.ChatID, sp.Video, sp.CaptionField, sp.DurationField, sp.ReplyToMessageID, sp.ReplyMarkup)
 }
 
 // SendLocation ...

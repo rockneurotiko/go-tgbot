@@ -228,37 +228,37 @@ func (bot TgBot) SendPhotoQuery(payload interface{}) ResultWithMessage {
 // SimpleSendAudio send just an audio
 func (bot TgBot) SimpleSendAudio(msg Message, audio string) (res Message, err error) {
 	cid := msg.Chat.ID
-	var payload interface{} = SendAudioIDQuery{cid, audio, nil, nil, nil}
+	var payload interface{} = SendAudioIDQuery{cid, audio, nil, nil}
 	if looksLikePath(audio) {
-		payload = SendAudioPathQuery{cid, audio, nil, nil, nil}
+		payload = SendAudioPathQuery{cid, audio, nil, nil}
 	}
 	ressm := bot.SendAudioQuery(payload)
 	return splitResultInMessageError(ressm)
 }
 
 // SendAudioWithKeyboard send a audio with explicit Keyboard
-func (bot TgBot) SendAudioWithKeyboard(cid int, audio string, caption *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendAudioWithKeyboard(cid int, audio string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, caption, rmi, &rkm)
+	return bot.SendAudio(cid, audio, rmi, &rkm)
 }
 
 // SendAudioWithForceReply send a audio with explicit Force Reply.
-func (bot TgBot) SendAudioWithForceReply(cid int, audio string, caption *string, rmi *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendAudioWithForceReply(cid int, audio string, rmi *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, caption, rmi, &rkm)
+	return bot.SendAudio(cid, audio, rmi, &rkm)
 }
 
 // SendAudioWithKeyboardHide send a audio with explicit Keyboard Hide.
-func (bot TgBot) SendAudioWithKeyboardHide(cid int, audio string, caption *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendAudioWithKeyboardHide(cid int, audio string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, caption, rmi, &rkm)
+	return bot.SendAudio(cid, audio, rmi, &rkm)
 }
 
 // SendAudio full function to send an audio. Uses the reply markup interface.
-func (bot TgBot) SendAudio(cid int, audio string, caption *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendAudioIDQuery{cid, audio, caption, rmi, rm}
+func (bot TgBot) SendAudio(cid int, audio string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendAudioIDQuery{cid, audio, rmi, rm}
 	if looksLikePath(audio) {
-		payload = SendAudioPathQuery{cid, audio, caption, rmi, rm}
+		payload = SendAudioPathQuery{cid, audio, rmi, rm}
 	}
 	return bot.SendAudioQuery(payload)
 }
@@ -314,15 +314,15 @@ func (bot TgBot) SendDocument(cid int, document interface{}, rmi *int, rm *Reply
 	return bot.SendDocumentQuery(payload)
 }
 
-func (bot TgBot) SendDocumentImageTest(cid int, payload interface{}) ResultWithMessage {
-	payload, err := bot.documentInterfaceToType(cid, payload, nil, nil)
-	if err != nil {
-		errc := 500
-		errs := err.Error()
-		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
-	}
-	return bot.SendDocumentQuery(payload)
-}
+// func (bot TgBot) SendDocumentImageTest(cid int, payload interface{}) ResultWithMessage {
+// 	payload, err := bot.documentInterfaceToType(cid, payload, nil, nil)
+// 	if err != nil {
+// 		errc := 500
+// 		errs := err.Error()
+// 		return ResultWithMessage{ResultBase{false, &errc, &errs}, nil}
+// 	}
+// 	return bot.SendDocumentQuery(payload)
+// }
 
 func (bot TgBot) documentInterfaceToType(cid int, photo interface{}, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
 	switch pars := photo.(type) {
@@ -430,37 +430,37 @@ func (bot TgBot) SendStickerQuery(payload interface{}) ResultWithMessage {
 // SimpleSendVideo just send a video from file path or id
 func (bot TgBot) SimpleSendVideo(msg Message, photo string) (res Message, err error) {
 	cid := msg.Chat.ID
-	var payload interface{} = SendVideoIDQuery{cid, photo, nil, nil}
+	var payload interface{} = SendVideoIDQuery{cid, photo, nil, nil, nil, nil}
 	if looksLikePath(photo) {
-		payload = SendVideoPathQuery{cid, photo, nil, nil}
+		payload = SendVideoPathQuery{cid, photo, nil, nil, nil, nil}
 	}
 	ressm := bot.SendVideoQuery(payload)
 	return splitResultInMessageError(ressm)
 }
 
 // SendVideoWithKeyboard send a video with explicit keyboard.
-func (bot TgBot) SendVideoWithKeyboard(cid int, photo string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendVideoWithKeyboard(cid int, photo string, caption *string, duration *int, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendVideo(cid, photo, rmi, &rkm)
+	return bot.SendVideo(cid, photo, caption, duration, rmi, &rkm)
 }
 
 // SendVideoWithForceReply send a video with explicit force reply.
-func (bot TgBot) SendVideoWithForceReply(cid int, photo string, rmi *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendVideoWithForceReply(cid int, photo string, caption *string, duration *int, rmi *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendVideo(cid, photo, rmi, &rkm)
+	return bot.SendVideo(cid, photo, caption, duration, rmi, &rkm)
 }
 
 // SendVideoWithKeyboardHide send a video with explici keyboard hide.
-func (bot TgBot) SendVideoWithKeyboardHide(cid int, photo string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendVideoWithKeyboardHide(cid int, photo string, caption *string, duration *int, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendVideo(cid, photo, rmi, &rkm)
+	return bot.SendVideo(cid, photo, caption, duration, rmi, &rkm)
 }
 
 // SendVideo full function to send a video.
-func (bot TgBot) SendVideo(cid int, photo string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendVideoIDQuery{cid, photo, rmi, rm}
+func (bot TgBot) SendVideo(cid int, photo string, caption *string, duration *int, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendVideoIDQuery{cid, photo, duration, caption, rmi, rm}
 	if looksLikePath(photo) {
-		payload = SendVideoPathQuery{cid, photo, rmi, rm}
+		payload = SendVideoPathQuery{cid, photo, duration, caption, rmi, rm}
 	}
 	return bot.SendVideoQuery(payload)
 }

@@ -129,7 +129,7 @@ func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ..
 		botsmap[tokenpath] = bot
 	}
 
-	pathtolisten := path.Join(pathl, "(?P<token>[a-zA-Z0-9-]+)")
+	pathtolisten := path.Join(pathl, "(?P<token>[a-zA-Z0-9-_]+)")
 
 	m := martini.Classic()
 	m.Post(pathtolisten, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {

@@ -152,11 +152,7 @@ func (bot *TgBot) Start() {
 
 	removedhook := false
 
-	// i := 0
 	for {
-		// i = i + 1
-		// fmt.Println(i)
-
 		updatesList, err := bot.GetUpdates()
 		if err != nil {
 			fmt.Println(err)
@@ -167,7 +163,6 @@ func (bot *TgBot) Start() {
 			}
 			continue
 		}
-
 		bot.ProcessMessages(updatesList)
 	}
 }

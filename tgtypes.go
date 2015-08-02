@@ -40,6 +40,7 @@ type Message struct {
 	Photo               *[]PhotoSize `json:"photo,omitempty"`
 	Sticker             *Sticker     `json:"sticker,omitempty"`
 	Video               *Video       `json:"video,omitempty"`
+	Caption             *string      `json:"caption,omitempty"`
 	Location            *Location    `json:"location,omitempty"`
 	NewChatParticipant  *User        `json:"new_chat_participant,omitempty"`
 	LeftChatParticipant *User        `json:"left_chat_participant,omitempty"`
@@ -67,32 +68,31 @@ type Audio struct {
 
 // Document ...
 type Document struct {
-	FileID   string    `json:"file_id"`
-	Thumb    PhotoSize `json:"thumb"`
-	FileName *string   `json:"file_name,omitempty"`
-	MimeType *string   `json:"mime_type,omitempty"`
-	FileSize *int      `json:"file_size,omitempty"`
+	FileID   string     `json:"file_id"`
+	Thumb    *PhotoSize `json:"thumb,omitempty"`
+	FileName *string    `json:"file_name,omitempty"`
+	MimeType *string    `json:"mime_type,omitempty"`
+	FileSize *int       `json:"file_size,omitempty"`
 }
 
 // Sticker ...
 type Sticker struct {
-	FileID   string    `json:"file_id"`
-	Width    int       `json:"width"`
-	Height   int       `json:"height"`
-	Thumb    PhotoSize `json:"thumb"` // .webp or .jpg format
-	FileSize *int      `json:"file_size,omitempty"`
+	FileID   string     `json:"file_id"`
+	Width    int        `json:"width"`
+	Height   int        `json:"height"`
+	Thumb    *PhotoSize `json:"thumb,omitempty"` // .webp or .jpg format
+	FileSize *int       `json:"file_size,omitempty"`
 }
 
 // Video ...
 type Video struct {
-	FileID   string    `json:"file_id"`
-	Width    int       `json:"width"`
-	Height   int       `json:"height"`
-	Duration int       `json:"duration"`
-	Thumb    PhotoSize `json:"thumb"`
-	MimeType *string   `json:"mime_type,omitempty"`
-	FileSize *int      `json:"file_size,omitempty"`
-	Caption  *string   `json:"caption,omitempty"`
+	FileID   string     `json:"file_id"`
+	Width    int        `json:"width"`
+	Height   int        `json:"height"`
+	Duration int        `json:"duration"`
+	Thumb    *PhotoSize `json:"thumb,omitempty"`
+	MimeType *string    `json:"mime_type,omitempty"`
+	FileSize *int       `json:"file_size,omitempty"`
 }
 
 // Contact ...
@@ -100,7 +100,7 @@ type Contact struct {
 	PhoneNumber string  `json:"phone_number"`
 	FirstName   string  `json:"first_name"`
 	LastName    *string `json:"last_name,omitempty"`
-	UserID      *string `json:"user_id,omitempty"`
+	UserID      *int    `json:"user_id,omitempty"`
 }
 
 // Location ...
@@ -270,7 +270,6 @@ type SendPhotoPathQuery struct {
 type SendAudioIDQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Audio            string          `json:"audio"`
-	Caption          *string         `json:"caption,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
@@ -279,7 +278,6 @@ type SendAudioIDQuery struct {
 type SendAudioPathQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Audio            string          `json:"audio"`
-	Caption          *string         `json:"caption,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
@@ -320,6 +318,8 @@ type SendStickerPathQuery struct {
 type SendVideoIDQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Video            string          `json:"video"`
+	Duration         *int            `json:"duration,omitempty"`
+	Caption          *string         `json:"caption,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
@@ -328,6 +328,8 @@ type SendVideoIDQuery struct {
 type SendVideoPathQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Video            string          `json:"video"`
+	Duration         *int            `json:"duration,omitempty"`
+	Caption          *string         `json:"caption,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
