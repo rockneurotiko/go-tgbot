@@ -228,37 +228,37 @@ func (bot TgBot) SendPhotoQuery(payload interface{}) ResultWithMessage {
 // SimpleSendAudio send just an audio
 func (bot TgBot) SimpleSendAudio(msg Message, audio string) (res Message, err error) {
 	cid := msg.Chat.ID
-	var payload interface{} = SendAudioIDQuery{cid, audio, nil, nil}
+	var payload interface{} = SendAudioIDQuery{cid, audio, nil, nil, nil, nil, nil}
 	if looksLikePath(audio) {
-		payload = SendAudioPathQuery{cid, audio, nil, nil}
+		payload = SendAudioPathQuery{cid, audio, nil, nil, nil, nil, nil}
 	}
 	ressm := bot.SendAudioQuery(payload)
 	return splitResultInMessageError(ressm)
 }
 
 // SendAudioWithKeyboard send a audio with explicit Keyboard
-func (bot TgBot) SendAudioWithKeyboard(cid int, audio string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendAudioWithKeyboard(cid int, audio string, duration *int, performer *string, title *string, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, rmi, &rkm)
+	return bot.SendAudio(cid, audio, duration, performer, title, rmi, &rkm)
 }
 
 // SendAudioWithForceReply send a audio with explicit Force Reply.
-func (bot TgBot) SendAudioWithForceReply(cid int, audio string, rmi *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendAudioWithForceReply(cid int, audio string, duration *int, performer *string, title *string, rmi *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, rmi, &rkm)
+	return bot.SendAudio(cid, audio, duration, performer, title, rmi, &rkm)
 }
 
 // SendAudioWithKeyboardHide send a audio with explicit Keyboard Hide.
-func (bot TgBot) SendAudioWithKeyboardHide(cid int, audio string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendAudioWithKeyboardHide(cid int, audio string, duration *int, performer *string, title *string, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendAudio(cid, audio, rmi, &rkm)
+	return bot.SendAudio(cid, audio, duration, performer, title, rmi, &rkm)
 }
 
 // SendAudio full function to send an audio. Uses the reply markup interface.
-func (bot TgBot) SendAudio(cid int, audio string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var payload interface{} = SendAudioIDQuery{cid, audio, rmi, rm}
+func (bot TgBot) SendAudio(cid int, audio string, duration *int, performer *string, title *string, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendAudioIDQuery{cid, audio, duration, performer, title, rmi, rm}
 	if looksLikePath(audio) {
-		payload = SendAudioPathQuery{cid, audio, rmi, rm}
+		payload = SendAudioPathQuery{cid, audio, duration, performer, title, rmi, rm}
 	}
 	return bot.SendAudioQuery(payload)
 }
@@ -266,6 +266,51 @@ func (bot TgBot) SendAudio(cid int, audio string, rmi *int, rm *ReplyMarkupInt) 
 // SendAudioQuery full function using the query.
 func (bot TgBot) SendAudioQuery(payload interface{}) ResultWithMessage {
 	return bot.sendGenericQuery("sendAudio", "Audio", "audio", payload)
+}
+
+// Voice!!
+
+// SimpleSendVoice send just an audio
+func (bot TgBot) SimpleSendVoice(msg Message, audio string) (res Message, err error) {
+	cid := msg.Chat.ID
+	var payload interface{} = SendVoiceIDQuery{cid, audio, nil, nil, nil}
+	if looksLikePath(audio) {
+		payload = SendVoicePathQuery{cid, audio, nil, nil, nil}
+	}
+	ressm := bot.SendVoiceQuery(payload)
+	return splitResultInMessageError(ressm)
+}
+
+// SendVoiceWithKeyboard send a audio with explicit Keyboard
+func (bot TgBot) SendVoiceWithKeyboard(cid int, audio string, duration *int, rmi *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVoice(cid, audio, duration, rmi, &rkm)
+}
+
+// SendVoiceWithForceReply send a audio with explicit Force Reply.
+func (bot TgBot) SendVoiceWithForceReply(cid int, audio string, duration *int, rmi *int, rm ForceReply) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVoice(cid, audio, duration, rmi, &rkm)
+}
+
+// SendVoiceWithKeyboardHide send a audio with explicit Keyboard Hide.
+func (bot TgBot) SendVoiceWithKeyboardHide(cid int, audio string, duration *int, rmi *int, rm ReplyKeyboardHide) ResultWithMessage {
+	var rkm ReplyMarkupInt = rm
+	return bot.SendVoice(cid, audio, duration, rmi, &rkm)
+}
+
+// SendVoice full function to send an audio. Uses the reply markup interface.
+func (bot TgBot) SendVoice(cid int, audio string, duration *int, rmi *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var payload interface{} = SendVoiceIDQuery{cid, audio, duration, rmi, rm}
+	if looksLikePath(audio) {
+		payload = SendVoicePathQuery{cid, audio, nil, rmi, rm}
+	}
+	return bot.SendVoiceQuery(payload)
+}
+
+// SendVoiceQuery full function using the query.
+func (bot TgBot) SendVoiceQuery(payload interface{}) ResultWithMessage {
+	return bot.sendGenericQuery("sendVoice", "Voice", "voice", payload)
 }
 
 //Documents!!

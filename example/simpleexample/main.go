@@ -195,14 +195,29 @@ func sendImageWithKey(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 func sendAudio(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	bot.Answer(msg).
 		Audio("example/simpleexample/files/test.mp3").
+		Title("Test mp3").
 		End()
 	// bot.SimpleSendAudio(msg, "example/simpleexample/files/test.mp3")
 	return nil
 }
 
 func returnAudio(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Audio, fid string) {
-	bot.Answer(msg).Audio(fid).End()
-	// bot.SimpleSendAudio(msg, fid)
+	title := ""
+	if audio.Title != nil {
+		title = *audio.Title
+	}
+	bot.Answer(msg).Audio(fid).Duration(audio.Duration).Title(title).End()
+}
+
+func sendVoice(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
+	bot.Answer(msg).
+		Voice("example/simpleexample/files/test.mp3").
+		End()
+	return nil
+}
+
+func returnVoice(bot tgbot.TgBot, msg tgbot.Message, audio tgbot.Voice, fid string) {
+	bot.Answer(msg).Voice(fid).End()
 }
 
 func sendDocument(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
@@ -240,6 +255,7 @@ func returnSticker(bot tgbot.TgBot, msg tgbot.Message, sticker tgbot.Sticker, fi
 func sendVideo(bot tgbot.TgBot, msg tgbot.Message, text string) *string {
 	bot.Answer(msg).
 		Video("example/simpleexample/files/video.mp4").
+		Caption("There you go ^^").
 		End()
 	// bot.SimpleSendVideo(msg, "example/simpleexample/files/video.mp4")
 	return nil
@@ -340,6 +356,8 @@ func main() {
 		ImageFn(imageResend).
 		SimpleCommandFn(`sendaudio`, sendAudio).
 		AudioFn(returnAudio).
+		SimpleCommandFn(`sendvoice`, sendVoice).
+		VoiceFn(returnVoice).
 		SimpleCommandFn(`senddocument`, sendDocument).
 		DocumentFn(returnDocument).
 		SimpleCommandFn(`sendsticker`, sendSticker).
@@ -364,11 +382,6 @@ func main() {
 
 	// temp := bot.GetUserProfilePhotos(bot.ID, 1)
 	// fmt.Println(temp)
-	// m, _ := bot.ConfigureWebhook("url", "path")
-	// http.Handle("/", m)
-	// if err := http.ListenAndServe(bind, nil); err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	bot.SimpleStart()
 

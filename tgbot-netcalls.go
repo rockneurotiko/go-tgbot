@@ -27,6 +27,9 @@ func (bot TgBot) sendGenericQuery(path string, ignore string, file string, paylo
 	case SendAudioIDQuery:
 		hookPayload(&val, bot.DefaultOptions)
 		return bot.genericSendPostData(url, val)
+	case SendVoiceIDQuery:
+		hookPayload(&val, bot.DefaultOptions)
+		return bot.genericSendPostData(url, val)
 	case SendDocumentIDQuery:
 		hookPayload(&val, bot.DefaultOptions)
 		return bot.genericSendPostData(url, val)
@@ -41,6 +44,9 @@ func (bot TgBot) sendGenericQuery(path string, ignore string, file string, paylo
 		hookPayload(&val, bot.DefaultOptions)
 		return bot.sendConvertingFile(url, ignore, file, val)
 	case SendAudioPathQuery:
+		hookPayload(&val, bot.DefaultOptions)
+		return bot.sendConvertingFile(url, ignore, file, val)
+	case SendVoicePathQuery:
 		hookPayload(&val, bot.DefaultOptions)
 		return bot.sendConvertingFile(url, ignore, file, val)
 	case SendDocumentPathQuery:

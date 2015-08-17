@@ -156,6 +156,25 @@ func (icc AudioConditionalCall) call(bot TgBot, msg Message) {
 	icc.f(bot, msg, audio, audio.FileID)
 }
 
+// VoiceConditionalCall ...
+type VoiceConditionalCall struct {
+	f func(TgBot, Message, Voice, string)
+}
+
+// canCall ...
+func (icc VoiceConditionalCall) canCall(bot TgBot, msg Message) bool {
+	return msg.Voice != nil
+}
+
+// call ...
+func (icc VoiceConditionalCall) call(bot TgBot, msg Message) {
+	if msg.Voice == nil {
+		return
+	}
+	voice := *msg.Voice
+	icc.f(bot, msg, voice, voice.FileID)
+}
+
 // DocumentConditionalCall ...
 type DocumentConditionalCall struct {
 	f func(TgBot, Message, Document, string)

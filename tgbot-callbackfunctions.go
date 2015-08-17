@@ -78,6 +78,12 @@ func (bot *TgBot) AudioFn(f func(TgBot, Message, Audio, string)) *TgBot {
 	return bot
 }
 
+// VoiceFn  add a function to be called when an audio arrives.
+func (bot *TgBot) VoiceFn(f func(TgBot, Message, Voice, string)) *TgBot {
+	bot.addToConditionalFuncs(VoiceConditionalCall{f})
+	return bot
+}
+
 // DocumentFn add a function to be called when a document arrives.
 func (bot *TgBot) DocumentFn(f func(TgBot, Message, Document, string)) *TgBot {
 	bot.addToConditionalFuncs(DocumentConditionalCall{f})

@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fatih/camelcase"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
-	"github.com/fatih/camelcase"
 	"github.com/martini-contrib/gorelic"
 	"github.com/oleiade/reflections"
 	"github.com/rockneurotiko/gorequest"

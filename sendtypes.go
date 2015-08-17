@@ -24,7 +24,12 @@ func (s *Send) Photo(photo interface{}) *SendPhoto {
 
 // Audio return a SendAudio instance to chain actions easy
 func (s *Send) Audio(audio string) *SendAudio {
-	return &SendAudio{s, audio, nil, nil}
+	return &SendAudio{s, audio, nil, nil, nil, nil, nil}
+}
+
+// Voice return a SendVoice instance to chain actions easy
+func (s *Send) Voice(voice string) *SendVoice {
+	return &SendVoice{s, voice, nil, nil, nil}
 }
 
 // Document return a SendDocument instance to chain actions easy
@@ -161,9 +166,30 @@ func (sp SendPhoto) End() ResultWithMessage {
 // SendAudio ...
 type SendAudio struct {
 	Send             *Send
-	Photo            string
+	Audio            string
+	DurationField    *int
+	PerformerField   *string
+	TitleField       *string
 	ReplyToMessageID *int
 	ReplyMarkup      *ReplyMarkupInt
+}
+
+// Duration ...
+func (sp *SendAudio) Duration(d int) *SendAudio {
+	sp.DurationField = &d
+	return sp
+}
+
+// Performer ...
+func (sp *SendAudio) Performer(p string) *SendAudio {
+	sp.PerformerField = &p
+	return sp
+}
+
+// Title ...
+func (sp *SendAudio) Title(d string) *SendAudio {
+	sp.TitleField = &d
+	return sp
 }
 
 // ReplyToMessage ...
@@ -195,7 +221,60 @@ func (sp *SendAudio) ForceReply(fr ForceReply) *SendAudio {
 
 // End ...
 func (sp SendAudio) End() ResultWithMessage {
-	return sp.Send.Bot.SendAudio(sp.Send.ChatID, sp.Photo, sp.ReplyToMessageID, sp.ReplyMarkup)
+	return sp.Send.Bot.SendAudio(sp.Send.ChatID,
+		sp.Audio,
+		sp.DurationField,
+		sp.PerformerField,
+		sp.TitleField,
+		sp.ReplyToMessageID,
+		sp.ReplyMarkup)
+}
+
+// SendVoice ...
+type SendVoice struct {
+	Send             *Send
+	Voice            string
+	DurationField    *int
+	ReplyToMessageID *int
+	ReplyMarkup      *ReplyMarkupInt
+}
+
+// Duration ...
+func (sp *SendVoice) Duration(d int) *SendVoice {
+	sp.DurationField = &d
+	return sp
+}
+
+// ReplyToMessage ...
+func (sp *SendVoice) ReplyToMessage(rm int) *SendVoice {
+	sp.ReplyToMessageID = &rm
+	return sp
+}
+
+// Keyboard ...
+func (sp *SendVoice) Keyboard(kb ReplyKeyboardMarkup) *SendVoice {
+	var rmi ReplyMarkupInt = kb
+	sp.ReplyMarkup = &rmi
+	return sp
+}
+
+// KeyboardHide ...
+func (sp *SendVoice) KeyboardHide(kb ReplyKeyboardHide) *SendVoice {
+	var rmi ReplyMarkupInt = kb
+	sp.ReplyMarkup = &rmi
+	return sp
+}
+
+// ForceReply ...
+func (sp *SendVoice) ForceReply(fr ForceReply) *SendVoice {
+	var rmi ReplyMarkupInt = fr
+	sp.ReplyMarkup = &rmi
+	return sp
+}
+
+// End ...
+func (sp SendVoice) End() ResultWithMessage {
+	return sp.Send.Bot.SendVoice(sp.Send.ChatID, sp.Voice, sp.DurationField, sp.ReplyToMessageID, sp.ReplyMarkup)
 }
 
 // SendDocument ...

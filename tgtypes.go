@@ -36,6 +36,7 @@ type Message struct {
 	ReplyToMessage      *Message     `json:"reply_to_message,omitempty"`
 	Text                *string      `json:"text,omitempty"`
 	Audio               *Audio       `json:"audio,omitempty"`
+	Voice               *Voice       `json:"voice,omitempty"`
 	Document            *Document    `json:"document,omitempty"`
 	Photo               *[]PhotoSize `json:"photo,omitempty"`
 	Sticker             *Sticker     `json:"sticker,omitempty"`
@@ -58,8 +59,18 @@ type PhotoSize struct {
 	FileSize *int   `json:"file_size,omitempty"`
 }
 
-// Audio ..
+// Audio ...
 type Audio struct {
+	FileID    string  `json:"file_id"`
+	Duration  int     `json:"duration"`
+	Performer *string `json:"performer,omitempty"`
+	Title     *string `json:"title,omitempty"`
+	MimeType  *string `json:"mime_type,omitempty"`
+	FileSize  *int    `json:"file_size,omitempty"`
+}
+
+// Voice ...
+type Voice struct {
 	FileID   string  `json:"file_id"`
 	Duration int     `json:"duration"`
 	MimeType *string `json:"mime_type,omitempty"`
@@ -266,10 +277,31 @@ type SendPhotoPathQuery struct {
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
 
+// SendVoiceIDQuery ...
+type SendVoiceIDQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Voice            string          `json:"voice"`
+	Duration         *int            `json:"duration,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// SendVoicePathQuery ...
+type SendVoicePathQuery struct {
+	ChatID           int             `json:"chat_id"`
+	Voice            string          `json:"voice"`
+	Duration         *int            `json:"duration,omitempty"`
+	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
 // SendAudioIDQuery ...
 type SendAudioIDQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Audio            string          `json:"audio"`
+	Duration         *int            `json:"duration,omitempty"`
+	Performer        *string         `json:"performer,omitempty"`
+	Title            *string         `json:"title,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
@@ -278,6 +310,9 @@ type SendAudioIDQuery struct {
 type SendAudioPathQuery struct {
 	ChatID           int             `json:"chat_id"`
 	Audio            string          `json:"audio"`
+	Duration         *int            `json:"duration,omitempty"`
+	Performer        *string         `json:"performer,omitempty"`
+	Title            *string         `json:"title,omitempty"`
 	ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
