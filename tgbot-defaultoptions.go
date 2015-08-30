@@ -9,6 +9,12 @@ type DefaultOptionsBot struct {
 	OneTimeKeyboard            *bool
 	CleanInitialUsername       bool
 	AllowWithoutSlashInMention bool
+	LowerText                  bool
+}
+
+func (bot *TgBot) SetLowerText(b bool) *TgBot {
+	bot.DefaultOptions.LowerText = b
+	return bot
 }
 
 // DefaultDisableWebpagePreview ...

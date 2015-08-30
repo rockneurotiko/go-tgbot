@@ -34,17 +34,23 @@ func (bot *TgBot) addToConditionalFuncs(cf ConditionCallStructure) {
 }
 
 func (bot TgBot) cleanMessage(msg Message) Message {
-	if bot.DefaultOptions.CleanInitialUsername {
-		if msg.Text != nil {
+	if msg.Text != nil {
+		if bot.DefaultOptions.CleanInitialUsername {
 			text := *msg.Text
 			username := fmt.Sprintf("@%s", bot.Username)
 			if strings.HasPrefix(text, username) {
 				text = strings.TrimSpace(strings.Replace(text, username, "", 1)) // Replace one time
-				if bot.DefaultOptions.AllowWithoutSlashInMention && !strings.HasSuffix(text, "/") {
+				if bot.DefaultOptions.AllowWithoutSlashInMention &&
+					!strings.HasSuffix(text, "/") {
 					text = "/" + text
 				}
 				msg.Text = &text
 			}
+		}
+
+		if bot.DefaultOptions.LowerText {
+			text := strings.ToLower(*msg.Text)
+			msg.Text = &text
 		}
 	}
 	return msg
