@@ -396,6 +396,12 @@ type SetWebhookQuery struct {
 	URL *string `json:"url,omitempty"`
 }
 
+// SetWebhookCertQuery ...
+type SetWebhookCertQuery struct {
+	URL         string `json:"url,omitempty"`
+	Certificate string `json:"certificate,omitempty"`
+}
+
 // GenericSendQuery ...
 type GenericSendQuery struct {
 	ChatID           int             `json:"chat_id"`

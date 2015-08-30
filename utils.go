@@ -124,8 +124,9 @@ func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ..
 			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
 			continue
 		}
-
-		bot.StartMainListener()
+		if bot.MainListener == nil {
+			bot.StartMainListener()
+		}
 		botsmap[tokenpath] = bot
 	}
 

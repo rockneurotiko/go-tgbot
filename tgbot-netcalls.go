@@ -20,6 +20,11 @@ import (
 func (bot TgBot) sendGenericQuery(path string, ignore string, file string, payload interface{}) ResultWithMessage {
 	url := bot.buildPath(path)
 	switch val := payload.(type) {
+	//WebHook
+	case SetWebhookQuery:
+		return bot.genericSendPostData(url, val)
+	case SetWebhookCertQuery:
+		return bot.sendConvertingFile(url, ignore, file, val)
 	// ID
 	case SendPhotoIDQuery:
 		hookPayload(&val, bot.DefaultOptions)
@@ -106,7 +111,9 @@ func (bot TgBot) uploadFileWithResult(url string, params map[string]string, fiel
 	return res
 }
 
-func (bot TgBot) uploadFile(url string, params map[string]string, fieldname string, filename interface{}) (ResultWithMessage, error) {
+func (bot TgBot) uploadFileNoResult(url string, params map[string]string, fieldname string, filename interface{}) ([]byte, error) {
+	defaultb := make([]byte, 0)
+
 	var b bytes.Buffer
 	var err error
 	w := multipart.NewWriter(&b)
@@ -117,41 +124,41 @@ func (bot TgBot) uploadFile(url string, params map[string]string, fieldname stri
 		rfile = filepath.Clean(rfile)
 		f, err := os.Open(rfile)
 		if err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 
 		fw, err := w.CreateFormFile(fieldname, rfile)
 		if err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 
 		if _, err = io.Copy(fw, f); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 	case *gif.GIF:
 		if fw, err = w.CreateFormFile("document", "image.gif"); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 		if err = gif.EncodeAll(fw, rfile); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 	case image.Image:
 		imageQuality := jpeg.Options{Quality: jpeg.DefaultQuality}
 		if fw, err = w.CreateFormFile("photo", "image.jpeg"); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 		if err = jpeg.Encode(fw, rfile, &imageQuality); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 	}
 
 	for key, val := range params {
 		if fw, err = w.CreateFormField(key); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 
 		if _, err = fw.Write([]byte(val)); err != nil {
-			return ResultWithMessage{}, err
+			return defaultb, err
 		}
 	}
 
@@ -159,7 +166,7 @@ func (bot TgBot) uploadFile(url string, params map[string]string, fieldname stri
 
 	req, err := http.NewRequest("POST", url, &b)
 	if err != nil {
-		return ResultWithMessage{}, err
+		return defaultb, err
 	}
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
@@ -167,16 +174,100 @@ func (bot TgBot) uploadFile(url string, params map[string]string, fieldname stri
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return ResultWithMessage{}, err
+		return defaultb, err
 	}
 
 	bytes, err := ioutil.ReadAll(res.Body)
+
+	if err != nil {
+		return defaultb, err
+	}
+	return bytes, nil
+}
+
+func (bot TgBot) uploadFile(url string, params map[string]string, fieldname string, filename interface{}) (ResultWithMessage, error) {
+	bytes, err := bot.uploadFileNoResult(url, params, fieldname, filename)
 	if err != nil {
 		return ResultWithMessage{}, err
 	}
-
 	var apiResp ResultWithMessage
 	json.Unmarshal(bytes, &apiResp)
 
 	return apiResp, nil
 }
+
+// func (bot TgBot) uploadFile(url string, params map[string]string, fieldname string, filename interface{}) (ResultWithMessage, error) {
+// 	var b bytes.Buffer
+// 	var err error
+// 	w := multipart.NewWriter(&b)
+// 	var fw io.Writer
+
+// 	switch rfile := filename.(type) {
+// 	case string:
+// 		rfile = filepath.Clean(rfile)
+// 		f, err := os.Open(rfile)
+// 		if err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+
+// 		fw, err := w.CreateFormFile(fieldname, rfile)
+// 		if err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+
+// 		if _, err = io.Copy(fw, f); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 	case *gif.GIF:
+// 		if fw, err = w.CreateFormFile("document", "image.gif"); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 		if err = gif.EncodeAll(fw, rfile); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 	case image.Image:
+// 		imageQuality := jpeg.Options{Quality: jpeg.DefaultQuality}
+// 		if fw, err = w.CreateFormFile("photo", "image.jpeg"); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 		if err = jpeg.Encode(fw, rfile, &imageQuality); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 	}
+
+// 	for key, val := range params {
+// 		if fw, err = w.CreateFormField(key); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+
+// 		if _, err = fw.Write([]byte(val)); err != nil {
+// 			return ResultWithMessage{}, err
+// 		}
+// 	}
+
+// 	w.Close()
+
+// 	req, err := http.NewRequest("POST", url, &b)
+// 	if err != nil {
+// 		return ResultWithMessage{}, err
+// 	}
+
+// 	req.Header.Set("Content-Type", w.FormDataContentType())
+
+// 	client := &http.Client{}
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return ResultWithMessage{}, err
+// 	}
+
+// 	bytes, err := ioutil.ReadAll(res.Body)
+
+// 	if err != nil {
+// 		return ResultWithMessage{}, err
+// 	}
+
+// 	var apiResp ResultWithMessage
+// 	json.Unmarshal(bytes, &apiResp)
+
+// 	return apiResp, nil
+// }

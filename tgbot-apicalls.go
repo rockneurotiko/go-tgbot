@@ -59,16 +59,39 @@ func (bot TgBot) GetUpdates() ([]MessageWithUpdateID, error) {
 
 // SetWebhook call the setWebhook API method with the URL suplied, will return the result or an error (the error will be sended if the webhook can't be setted)
 func (bot TgBot) SetWebhook(url string) (ResultSetWebhook, error) {
-	pet := SetWebhookQuery{&url}
-	req := bot.SetWebhookQuery(pet)
+	// pet := SetWebhookQuery{&url}
+	// req := bot.SetWebhookQuery(pet)
+	req := bot.SetWebhookQuery(&url, nil)
 	if !req.Ok {
 		return req, errors.New(req.Description)
 	}
 	return req, nil
 }
 
-// SetWebhookQuery raw method that uses the struct to send the petition.
-func (bot TgBot) SetWebhookQuery(q SetWebhookQuery) ResultSetWebhook {
+// SetWebhookWithCert ...
+func (bot TgBot) SetWebhookWithCert(url string, cert string) ResultSetWebhook {
+	if !looksLikePath(cert) {
+		r := false
+		errc := 404
+		return ResultSetWebhook{false, "Your certificate is not a valid path", &r, &errc}
+	}
+
+	urlsend := bot.buildPath("setWebhook")
+
+	bytes, err := bot.uploadFileNoResult(urlsend, map[string]string{"url": url}, "certificate", cert)
+	if err != nil {
+		errc := 500
+		return ResultSetWebhook{false, "Some error happened", nil, &errc}
+	}
+	var apiResp ResultSetWebhook
+	json.Unmarshal(bytes, &apiResp)
+
+	return apiResp
+}
+
+// SetWebhookNoQuery ...
+func (bot TgBot) SetWebhookNoQuery(urlw string) ResultSetWebhook {
+	q := SetWebhookQuery{&urlw}
 	url := bot.buildPath("setWebhook")
 	body, error := postPetition(url, q, nil)
 
@@ -80,6 +103,14 @@ func (bot TgBot) SetWebhookQuery(q SetWebhookQuery) ResultSetWebhook {
 	var result ResultSetWebhook
 	json.Unmarshal([]byte(body), &result)
 	return result
+}
+
+// SetWebhookQuery raw method that uses the struct to send the petition.
+func (bot TgBot) SetWebhookQuery(url *string, cert *string) ResultSetWebhook {
+	if cert == nil {
+		return bot.SetWebhookNoQuery(*url)
+	}
+	return bot.SetWebhookWithCert(*url, *cert)
 }
 
 // GetUserProfilePhotos args will use only the two first parameters, the first one will be the limit of images to get, and the second will be the offset photo id.
