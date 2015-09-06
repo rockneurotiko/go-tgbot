@@ -24,6 +24,15 @@ func New(token string) *TgBot {
 
 // NewTgBot creates an instance of a new bot with the token supplied, if it's invalid this method fail with a panic.
 func NewTgBot(token string) *TgBot {
+	bot, err := NewWithError(token)
+	if err != nil {
+		panic(err)
+	}
+	return bot
+}
+
+// NewWithError creates an instance and return possible error
+func NewWithError(token string) (*TgBot, error) {
 	url := fmt.Sprintf(baseURL, token, "%s")
 	tgbot := &TgBot{
 		Token:                token,
@@ -39,13 +48,14 @@ func NewTgBot(token string) *TgBot {
 	}
 	user, err := tgbot.GetMe()
 	if err != nil {
-		panic(err)
+		return nil, err
+		// panic(err)
 	} else {
 		tgbot.FirstName = user.FirstName
 		tgbot.ID = user.ID
 		tgbot.Username = *user.Username
 	}
-	return tgbot
+	return tgbot, nil
 }
 
 // TgBot basic bot struct that handle all the interaction functions.
