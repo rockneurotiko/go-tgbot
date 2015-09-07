@@ -135,6 +135,13 @@ func (bot TgBot) uploadFileNoResult(url string, params map[string]string, fieldn
 		if _, err = io.Copy(fw, f); err != nil {
 			return defaultb, err
 		}
+	case ReaderSender:
+		if fw, err = w.CreateFormFile(fieldname, rfile.Name); err != nil {
+			return defaultb, err
+		}
+		if _, err = io.Copy(fw, rfile.Read); err != nil {
+			return defaultb, err
+		}
 	case *gif.GIF:
 		if fw, err = w.CreateFormFile("document", "image.gif"); err != nil {
 			return defaultb, err

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/gif"
+	"io"
 	"strings"
 )
 
@@ -400,6 +401,11 @@ func (bot TgBot) SendDocument(cid int, document interface{}, rmi *int, rm *Reply
 // 	return bot.SendDocumentQuery(payload)
 // }
 
+type ReaderSender struct {
+	Read io.Reader
+	Name string
+}
+
 func (bot TgBot) documentInterfaceToType(cid int, photo interface{}, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
 	switch pars := photo.(type) {
 	case string:
@@ -407,6 +413,15 @@ func (bot TgBot) documentInterfaceToType(cid int, photo interface{}, rmi *int, r
 		if looksLikePath(pars) {
 			payload = SendDocumentPathQuery{cid, pars, rmi, rm}
 		}
+	case ReaderSender:
+		mp := struct {
+			ChatID           int             `json:"chat_id"`
+			Document         ReaderSender    `json:"document"`
+			ReplyToMessageID *int            `json:"reply_to_message_id,omitempty"`
+			ReplyMarkup      *ReplyMarkupInt `json:"reply_markup,omitempty"`
+		}{cid, pars, rmi, rm}
+		hookPayload(&mp, bot.DefaultOptions)
+		payload = mp
 	case image.Image:
 		{
 			mp := struct {
