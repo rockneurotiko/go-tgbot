@@ -8,8 +8,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/botanio/sdk/go"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/gorelic"
 )
 
 const (
@@ -38,6 +40,8 @@ func NewWithError(token string) (*TgBot, error) {
 		Token:                token,
 		BaseRequestURL:       url,
 		MainListener:         nil,
+		RelicToken:           "",
+		BotanIO:              nil,
 		TestConditionalFuncs: []ConditionCallStructure{},
 		ChainConditionals:    []*ChainStructure{},
 		BuildingChain:        false,
@@ -65,6 +69,8 @@ type TgBot struct {
 	ID                   int
 	Username             string
 	BaseRequestURL       string
+	RelicToken           string
+	BotanIO              *botan.Botan
 	MainListener         chan MessageWithUpdateID
 	LastUpdateID         int64
 	TestConditionalFuncs []ConditionCallStructure
@@ -209,11 +215,39 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 	m := martini.Classic()
 	m.Post(pathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
 		if msg.UpdateID > 0 && msg.Msg.ID > 0 {
+			bot.HandleBotan(msg.Msg)
 			bot.MainListener <- msg
 		}
 	})
 
+	if bot.RelicToken != "" {
+		gorelic.InitNewrelicAgent(bot.RelicToken, "TgBot Relic", false)
+		m.Use(gorelic.Handler)
+	}
+
 	m.Run()
+}
+
+func (bot TgBot) HandleBotan(msg Message) {
+	if bot.BotanIO != nil {
+		id := msg.ID
+		name := "other"
+		if msg.Text != nil {
+			name = fmt.Sprintf("text:%s", *msg.Text)
+		}
+		bot.BotanIO.TrackAsync(id, msg, name, func(a botan.Answer, e []error) {})
+	}
+}
+
+func (bot *TgBot) SetRelicToken(tok string) *TgBot {
+	bot.RelicToken = tok
+	return bot
+}
+
+func (bot *TgBot) SetBotanToken(tok string) *TgBot {
+	t := botan.New(tok)
+	bot.BotanIO = &t
+	return bot
 }
 
 func (bot TgBot) buildPath(action string) string {
