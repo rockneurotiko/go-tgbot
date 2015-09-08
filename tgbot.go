@@ -230,7 +230,7 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 
 func (bot TgBot) HandleBotan(msg Message) {
 	if bot.BotanIO != nil {
-		id := msg.ID
+		id := msg.Chat.ID
 		name := "other"
 		if msg.Text != nil {
 			name = fmt.Sprintf("text:%s", *msg.Text)
