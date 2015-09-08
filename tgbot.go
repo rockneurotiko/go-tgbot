@@ -40,7 +40,7 @@ func NewWithError(token string) (*TgBot, error) {
 		Token:                token,
 		BaseRequestURL:       url,
 		MainListener:         nil,
-		RelicToken:           "",
+		RelicCfg:             nil,
 		BotanIO:              nil,
 		TestConditionalFuncs: []ConditionCallStructure{},
 		ChainConditionals:    []*ChainStructure{},
@@ -69,7 +69,7 @@ type TgBot struct {
 	ID                   int
 	Username             string
 	BaseRequestURL       string
-	RelicToken           string
+	RelicCfg             *RelicConfig
 	BotanIO              *botan.Botan
 	MainListener         chan MessageWithUpdateID
 	LastUpdateID         int64
@@ -77,6 +77,11 @@ type TgBot struct {
 	ChainConditionals    []*ChainStructure
 	BuildingChain        bool
 	DefaultOptions       DefaultOptionsBot
+}
+
+type RelicConfig struct {
+	Token string
+	Name  string
 }
 
 // ProcessAllMsg default message handler that take care of clean the messages, the chains and the action functions.
@@ -220,8 +225,8 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 		}
 	})
 
-	if bot.RelicToken != "" {
-		gorelic.InitNewrelicAgent(bot.RelicToken, "TgBot Relic", false)
+	if bot.RelicCfg != nil {
+		gorelic.InitNewrelicAgent(bot.RelicCfg.Token, bot.RelicCfg.Name, false)
 		m.Use(gorelic.Handler)
 	}
 
@@ -239,8 +244,8 @@ func (bot TgBot) HandleBotan(msg Message) {
 	}
 }
 
-func (bot *TgBot) SetRelicToken(tok string) *TgBot {
-	bot.RelicToken = tok
+func (bot *TgBot) SetRelicConfig(tok string, name string) *TgBot {
+	bot.RelicCfg = &RelicConfig{tok, name}
 	return bot
 }
 

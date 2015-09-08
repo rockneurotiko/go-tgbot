@@ -94,7 +94,7 @@ func convertInterfaceMap(p interface{}, except []string) map[string]string {
 }
 
 // StartServerMultiplesBots ...
-func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ...*TgBot) {
+func StartServerMultiplesBots(uri string, pathl string, newrelic *RelicConfig, bots ...*TgBot) {
 	var puri *url.URL
 	if uri != "" {
 		tmpuri, err := url.Parse(uri)
@@ -143,8 +143,8 @@ func StartServerMultiplesBots(uri string, pathl string, newrelic string, bots ..
 		}
 	})
 
-	if newrelic != "" {
-		gorelic.InitNewrelicAgent(newrelic, "TgBot Relic", false)
+	if newrelic != nil {
+		gorelic.InitNewrelicAgent(newrelic.Token, newrelic.Name, false)
 		m.Use(gorelic.Handler)
 	}
 
