@@ -196,6 +196,20 @@ func (ca ChatAction) String() string {
 	return chataction[ca-1]
 }
 
+type ParseModeT int
+
+const (
+	Markdown ParseModeT = 1 + iota
+)
+
+var parsemode = [...]string{
+	"Markdown",
+}
+
+func (pa ParseModeT) String() string {
+	return parsemode[pa-1]
+}
+
 // Result messages, this is what we receive from GET params
 
 // ResultBase ...
@@ -247,6 +261,7 @@ type ResultSetWebhook struct {
 type QuerySendMessage struct {
 	ChatID                int             `json:"chat_id"`
 	Text                  string          `json:"text"`
+	ParseMode             *string         `json:"parse_mode,omitempty"`
 	DisableWebPagePreview *bool           `json:"disable_web_page_preview,omitempty"`
 	ReplyToMessageID      *int            `json:"reply_to_message_id,omitempty"`
 	ReplyMarkup           *ReplyMarkupInt `json:"reply_markup,omitempty"`

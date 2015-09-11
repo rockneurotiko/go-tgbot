@@ -139,31 +139,36 @@ func (bot TgBot) GetUserProfilePhotos(uid int, args ...int) UserProfilePhotos {
 
 // SimpleSendMessage send a simple text message.
 func (bot TgBot) SimpleSendMessage(msg Message, text string) (res Message, err error) {
-	ressm := bot.SendMessage(msg.Chat.ID, text, nil, nil, nil)
+	ressm := bot.SendMessage(msg.Chat.ID, text, nil, nil, nil, nil)
 	return splitResultInMessageError(ressm)
 }
 
 // SendMessageWithKeyboard send a message with explicit Keyboard
-func (bot TgBot) SendMessageWithKeyboard(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardMarkup) ResultWithMessage {
+func (bot TgBot) SendMessageWithKeyboard(cid int, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm ReplyKeyboardMarkup) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, parsemode, dwp, rtmid, &rkm)
 }
 
 // SendMessageWithForceReply send a message with explicit Force Reply.
-func (bot TgBot) SendMessageWithForceReply(cid int, text string, dwp *bool, rtmid *int, rm ForceReply) ResultWithMessage {
+func (bot TgBot) SendMessageWithForceReply(cid int, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm ForceReply) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, parsemode, dwp, rtmid, &rkm)
 }
 
 // SendMessageWithKeyboardHide send a message with explicit Keyboard Hide.
-func (bot TgBot) SendMessageWithKeyboardHide(cid int, text string, dwp *bool, rtmid *int, rm ReplyKeyboardHide) ResultWithMessage {
+func (bot TgBot) SendMessageWithKeyboardHide(cid int, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm ReplyKeyboardHide) ResultWithMessage {
 	var rkm ReplyMarkupInt = rm
-	return bot.SendMessage(cid, text, dwp, rtmid, &rkm)
+	return bot.SendMessage(cid, text, parsemode, dwp, rtmid, &rkm)
 }
 
 // SendMessage full function wrapper for sendMessage, uses the markup interface
-func (bot TgBot) SendMessage(cid int, text string, dwp *bool, rtmid *int, rm *ReplyMarkupInt) ResultWithMessage {
-	payload := QuerySendMessage{cid, text, dwp, rtmid, rm}
+func (bot TgBot) SendMessage(cid int, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm *ReplyMarkupInt) ResultWithMessage {
+	var pm *string = nil
+	if parsemode != nil {
+		pmt := parsemode.String()
+		pm = &pmt
+	}
+	payload := QuerySendMessage{cid, text, pm, dwp, rtmid, rm}
 	return bot.SendMessageQuery(payload)
 }
 

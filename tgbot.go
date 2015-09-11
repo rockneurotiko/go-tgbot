@@ -101,8 +101,8 @@ func (bot TgBot) ProcessAllMsg(msg Message) {
 
 	for _, v := range bot.TestConditionalFuncs {
 		if v.canCall(bot, msg) {
-			// v.call(bot, msg)
-			go v.call(bot, msg)
+			v.call(bot, msg)
+			// go v.call(bot, msg)
 		}
 	}
 }

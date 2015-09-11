@@ -8,7 +8,7 @@ type Send struct {
 
 // Text return a SendText instance to chain actions easy
 func (s *Send) Text(text string) *SendText {
-	return &SendText{s, text, nil, nil, nil}
+	return &SendText{s, text, nil, nil, nil, nil}
 }
 
 // Forward return a SendForward instance to chain actions easy
@@ -61,9 +61,15 @@ func (s *Send) Action(action ChatAction) *SendChatAction {
 type SendText struct {
 	Send                  *Send
 	Text                  string
+	ParseModeS            *ParseModeT
 	DisableWebPagePreview *bool
 	ReplyToMessageID      *int
 	ReplyMarkup           *ReplyMarkupInt
+}
+
+func (sp *SendText) ParseMode(pm ParseModeT) *SendText {
+	sp.ParseModeS = &pm
+	return sp
 }
 
 // DisablePreview ...
@@ -101,7 +107,7 @@ func (sp *SendText) ForceReply(fr ForceReply) *SendText {
 
 // End ...
 func (sp SendText) End() ResultWithMessage {
-	return sp.Send.Bot.SendMessage(sp.Send.ChatID, sp.Text, sp.DisableWebPagePreview, sp.ReplyToMessageID, sp.ReplyMarkup)
+	return sp.Send.Bot.SendMessage(sp.Send.ChatID, sp.Text, sp.ParseModeS, sp.DisableWebPagePreview, sp.ReplyToMessageID, sp.ReplyMarkup)
 }
 
 // SendForward ...
