@@ -1,7 +1,7 @@
 # Telegram Bot API library! [![GoDoc](https://godoc.org/github.com/rockneurotiko/go-tgbot?status.png)](http://godoc.org/github.com/rockneurotiko/go-tgbot)
-Telegram API bot wrapper for Go Language! &lt;3
+Telegram API bot wrapper for Go (golang) Language! &lt;3
 
-This is a beauty way to build telegram bots with Go language.
+This is a beauty way to build telegram bots with golang.
 
 Almost all methods have been added, and all features will be available soon. If you want a feature that hasn't been added yet or something is broken, open an issue and let's build it!
 
@@ -13,7 +13,7 @@ This is the first time I write Go code, so, if you see something that I'm doing 
 
 Also, some people had tell me that the way this library have to handle the functions is "too javascript". I am trying to be as much Go-like as I know, and the way I build the library chains are based in `mux` and `gorequest`, if you know a most Go-like way of build this, please, tell me! (I hate JS, and have heard that my library looks like JS made me sad xD)
 
-You can talk to me in [telegram](https://telegram.me/rock_neurotiko)
+You can talk to me in [telegram](https://telegram.me/rockneurotiko)
 
 ## Example
 
