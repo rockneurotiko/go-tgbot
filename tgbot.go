@@ -192,6 +192,10 @@ func (bot *TgBot) Start() {
 // The default server uses Martini classic, and listen in POST /<pathl>/token (The token without the :)
 // To listen it runs the Martini.Run() method, that get $HOST and $PORT from the environment, or uses locashost/3000 if not setted.
 func (bot *TgBot) ServerStart(uri string, pathl string) {
+	bot.ServerStartHostPort(uri, pathl, "", "")
+}
+
+func (bot *TgBot) ServerStartHostPort(uri string, pathl string, host string, port string) {
 	tokendiv := strings.Split(bot.Token, ":")
 	if len(tokendiv) != 2 {
 		return
@@ -205,6 +209,7 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 			return
 		}
 		nuri, _ := puri.Parse(pathl)
+
 		res, error := bot.SetWebhook(nuri.String())
 		if error != nil {
 			ec := res.ErrorCode
@@ -229,8 +234,11 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 		gorelic.InitNewrelicAgent(bot.RelicCfg.Token, bot.RelicCfg.Name, false)
 		m.Use(gorelic.Handler)
 	}
-
-	m.Run()
+	if host == "" || port == "" {
+		m.Run()
+	} else {
+		m.RunOnAddr(host + ":" + port)
+	}
 }
 
 func (bot TgBot) HandleBotan(msg Message) {

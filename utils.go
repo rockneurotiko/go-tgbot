@@ -93,8 +93,7 @@ func convertInterfaceMap(p interface{}, except []string) map[string]string {
 	return nint
 }
 
-// StartServerMultiplesBots ...
-func StartServerMultiplesBots(uri string, pathl string, newrelic *RelicConfig, bots ...*TgBot) {
+func StartServerMultiplesBotsHostPort(uri string, pathl string, host string, port string, newrelic *RelicConfig, bots ...*TgBot) {
 	var puri *url.URL
 	if uri != "" {
 		tmpuri, err := url.Parse(uri)
@@ -148,50 +147,17 @@ func StartServerMultiplesBots(uri string, pathl string, newrelic *RelicConfig, b
 		m.Use(gorelic.Handler)
 	}
 
-	m.Run()
+	if host == "" || port == "" {
+		m.Run()
+	} else {
+		m.RunOnAddr(host + ":" + port)
+	}
 }
 
 // StartServerMultiplesBots ...
-// func OtherMultipleStart(uri string, pathl string, bots ...*TgBot) {
-// 	// change this to start only one POST and have a map
-// 	var puri *url.URL
-// 	if uri != "" {
-// 		tmpuri, err := url.Parse(uri)
-// 		if err != nil {
-// 			fmt.Printf("Bad URL %s", uri)
-// 			return
-// 		}
-// 		puri = tmpuri
-// 	}
-
-// 	m := martini.Classic()
-// 	for _, bot := range bots {
-// 		tokendiv := strings.Split(bot.Token, ":")
-// 		if len(tokendiv) != 2 {
-// 			return
-// 		}
-// 		botpathl := path.Join(pathl, fmt.Sprintf("%s%s", tokendiv[0], tokendiv[1]))
-
-// 		nuri, _ := puri.Parse(botpathl)
-// 		remoteuri := nuri.String()
-// 		res, error := bot.SetWebhook(remoteuri)
-
-// 		if error != nil {
-// 			ec := res.ErrorCode
-// 			fmt.Printf("Error setting the webhook: \nError code: %d\nDescription: %s\n", &ec, res.Description)
-// 			continue
-// 		}
-
-// 		ch := bot.GetMessageChannel()
-// 		m.Post(botpathl, binding.Json(MessageWithUpdateID{}), func(params martini.Params, msg MessageWithUpdateID) {
-// 			// fmt.Println(msg)
-// 			if msg.UpdateID > 0 && msg.Msg.ID > 0 {
-// 				ch <- msg
-// 			}
-// 		})
-// 	}
-// 	m.Run()
-// }
+func StartServerMultiplesBots(uri string, pathl string, newrelic *RelicConfig, bots ...*TgBot) {
+	StartServerMultiplesBotsHostPort(uri, pathl, "", "", newrelic, bots...)
+}
 
 func splitResultInMessageError(ressm ResultWithMessage) (res Message, err error) {
 	if ressm.Ok && ressm.Result != nil {
