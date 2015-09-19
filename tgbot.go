@@ -16,6 +16,7 @@ import (
 
 const (
 	baseURL = "https://api.telegram.org/bot%s/%s"
+	fileURL = "https://api.telegram.org/file/bot%s/%s"
 	timeout = 60
 )
 
@@ -36,14 +37,17 @@ func NewTgBot(token string) *TgBot {
 // NewWithError creates an instance and return possible error
 func NewWithError(token string) (*TgBot, error) {
 	url := fmt.Sprintf(baseURL, token, "%s")
+	furl := fmt.Sprintf(fileURL, token, "%s")
 	tgbot := &TgBot{
 		Token:                token,
 		BaseRequestURL:       url,
+		BaseFileRequestURL:   furl,
 		MainListener:         nil,
 		RelicCfg:             nil,
 		BotanIO:              nil,
-		TestConditionalFuncs: []ConditionCallStructure{},
-		ChainConditionals:    []*ChainStructure{},
+		TestConditionalFuncs: make([]ConditionCallStructure, 0),
+		NoMessageFuncs:       make([]NoMessageCall, 0),
+		ChainConditionals:    make([]*ChainStructure, 0),
 		BuildingChain:        false,
 		DefaultOptions: DefaultOptionsBot{
 			CleanInitialUsername:       true,
@@ -69,11 +73,13 @@ type TgBot struct {
 	ID                   int
 	Username             string
 	BaseRequestURL       string
+	BaseFileRequestURL   string
 	RelicCfg             *RelicConfig
 	BotanIO              *botan.Botan
 	MainListener         chan MessageWithUpdateID
 	LastUpdateID         int64
 	TestConditionalFuncs []ConditionCallStructure
+	NoMessageFuncs       []NoMessageCall
 	ChainConditionals    []*ChainStructure
 	BuildingChain        bool
 	DefaultOptions       DefaultOptionsBot
@@ -99,10 +105,22 @@ func (bot TgBot) ProcessAllMsg(msg Message) {
 		}
 	}
 
+	// execlater := make([]ConditionCallStructure, 0)
+	executed := false
 	for _, v := range bot.TestConditionalFuncs {
+		// if nm, ok := v.(NoMessageCall); ok {
+		// 	execlater = append(execlater, nm)
+		// }
 		if v.canCall(bot, msg) {
+			executed = true
 			v.call(bot, msg)
 			// go v.call(bot, msg)
+		}
+	}
+
+	if !executed {
+		for _, f := range bot.NoMessageFuncs {
+			f.call(bot, msg)
 		}
 	}
 }
@@ -196,6 +214,13 @@ func (bot *TgBot) ServerStart(uri string, pathl string) {
 }
 
 func (bot *TgBot) ServerStartHostPort(uri string, pathl string, host string, port string) {
+	if bot.DefaultOptions.RecoverPanic {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("There was some panic: %s\n", r)
+			}
+		}()
+	}
 	tokendiv := strings.Split(bot.Token, ":")
 	if len(tokendiv) != 2 {
 		return
@@ -267,6 +292,10 @@ func (bot TgBot) buildPath(action string) string {
 	return fmt.Sprintf(bot.BaseRequestURL, action)
 }
 
+func (bot TgBot) buildFilePath(path string) string {
+	return fmt.Sprintf(bot.BaseFileRequestURL, path)
+}
+
 // Send start a Send petition to the user/chat cid. See Send* structs (SendPhoto, SendVideo, ...)
 func (bot *TgBot) Send(cid int) *Send {
 	return &Send{cid, bot}
@@ -275,4 +304,8 @@ func (bot *TgBot) Send(cid int) *Send {
 // Answer start a Send petition answering the message. See Send* structs (SendPhoto, SendText, ...)
 func (bot *TgBot) Answer(msg Message) *Send {
 	return &Send{msg.Chat.ID, bot}
+}
+
+func (bot *TgBot) File(id string) *SendGetFile {
+	return &SendGetFile{bot, id}
 }

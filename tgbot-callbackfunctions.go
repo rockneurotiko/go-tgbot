@@ -168,6 +168,11 @@ func (bot *TgBot) AnyMsgFn(f func(TgBot, Message)) *TgBot {
 	return bot
 }
 
+func (bot *TgBot) NotCalledFn(f func(TgBot, Message)) *TgBot {
+	bot.NoMessageFuncs = append(bot.NoMessageFuncs, NoMessageCall{f})
+	return bot
+}
+
 // CustomFn add a function to be called with a custom conditional function.
 func (bot *TgBot) CustomFn(cond func(TgBot, Message) bool, f func(TgBot, Message)) *TgBot {
 	bot.addToConditionalFuncs(CustomCall{cond, f})

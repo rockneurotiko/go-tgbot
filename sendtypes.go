@@ -1,5 +1,11 @@
 package tgbot
 
+import (
+	"errors"
+	"io"
+	"io/ioutil"
+)
+
 // Send general construct to generate send actions
 type Send struct {
 	ChatID int
@@ -485,4 +491,44 @@ func (sca *SendChatAction) SetAction(act ChatAction) *SendChatAction {
 // End ...
 func (sca SendChatAction) End() {
 	sca.Send.Bot.SendChatAction(sca.Send.ChatID, sca.Action)
+}
+
+// SendGetFile ...
+type SendGetFile struct {
+	Bot *TgBot
+	ID  string
+}
+
+func (self SendGetFile) ToPath(path string) error {
+	body, err := self.ToReader()
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	bodyb, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path, bodyb, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self SendGetFile) ToReader() (io.ReadCloser, error) {
+	res := self.Bot.GetFile(self.ID)
+	if !res.Ok || res.Result == nil {
+		msg := ""
+		if res.Description != nil {
+			msg = *res.Description
+		}
+		return nil, errors.New(msg)
+	}
+	fpath := res.Result.Path
+	return self.Bot.DownloadFilePathReader(fpath)
+}
+
+func (sgf SendGetFile) End() {
+	sgf.Bot.GetFile(sgf.ID)
 }

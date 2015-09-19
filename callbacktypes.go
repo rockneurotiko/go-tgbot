@@ -34,6 +34,11 @@ func AlwaysReturnTrue(bot TgBot, msg Message) bool {
 	return true
 }
 
+// AlwaysReturnFalse ...
+func AlwaysReturnFalse(bot TgBot, msg Message) bool {
+	return false
+}
+
 // NewChainStructure ...
 func NewChainStructure() *ChainStructure {
 	return &ChainStructure{[]ConditionCallStructure{}, map[int]int{}, false, nil}
@@ -131,9 +136,16 @@ func (icc ImageConditionalCall) call(bot TgBot, msg Message) {
 	}
 	photos := *msg.Photo
 	photoid := ""
-	if len(photos) > 0 {
-		photoid = photos[0].FileID
+	maxsize := 0
+
+	for _, p := range photos {
+		mult := p.Width * p.Height
+		if mult > maxsize {
+			photoid = p.FileID
+			maxsize = mult
+		}
 	}
+
 	icc.f(bot, msg, photos, photoid)
 }
 
@@ -154,6 +166,21 @@ func (icc AudioConditionalCall) call(bot TgBot, msg Message) {
 	}
 	audio := *msg.Audio
 	icc.f(bot, msg, audio, audio.FileID)
+}
+
+// NoMessageCall ...
+type NoMessageCall struct {
+	f func(TgBot, Message)
+}
+
+// canCall ...
+func (self NoMessageCall) canCall(bot TgBot, msg Message) bool {
+	return false
+}
+
+// call ...
+func (self NoMessageCall) call(bot TgBot, msg Message) {
+	self.f(bot, msg)
 }
 
 // VoiceConditionalCall ...

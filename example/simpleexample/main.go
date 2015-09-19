@@ -163,6 +163,8 @@ func conditionCallFunc(bot tgbot.TgBot, msg tgbot.Message) {
 }
 
 func imageResend(bot tgbot.TgBot, msg tgbot.Message, photos []tgbot.PhotoSize, id string) {
+	bot.File(id).ToPath("justatestfile.jpg")
+
 	caption := "I like this photo <3"
 	mid := msg.ID
 	bot.Answer(msg).Photo(id).Caption(caption).ReplyToMessage(mid).End()

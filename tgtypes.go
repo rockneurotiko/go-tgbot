@@ -210,6 +210,12 @@ func (pa ParseModeT) String() string {
 	return parsemode[pa-1]
 }
 
+type File struct {
+	ID   string `json:"file_id"`
+	Size int    `json:"file_size"`
+	Path string `json:"file_path"`
+}
+
 // Result messages, this is what we receive from GET params
 
 // ResultBase ...
@@ -229,6 +235,11 @@ type ResultWithMessage struct {
 type ResultWithUserProfilePhotos struct {
 	ResultBase
 	Result *UserProfilePhotos `json:"result,omitempty"`
+}
+
+type ResultWithGetFile struct {
+	ResultBase
+	Result *File `json:"result,omitempty"`
 }
 
 // MessageWithUpdateID ...

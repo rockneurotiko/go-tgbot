@@ -8,6 +8,8 @@ import (
 	"image/gif"
 	"io"
 	"strings"
+
+	"github.com/rockneurotiko/gorequest"
 )
 
 // GetMe Call getMe path
@@ -637,4 +639,38 @@ func (bot TgBot) GetUserProfilePhotosQuery(quer GetUserProfilePhotosQuery) Resul
 	var result ResultWithUserProfilePhotos
 	json.Unmarshal([]byte(body), &result)
 	return result
+}
+
+func (bot TgBot) GetFile(id string) ResultWithGetFile {
+	url := bot.buildPath("getFile")
+	body, error := postPetition(url, struct {
+		ID string `json:"file_id"`
+	}{id}, nil)
+
+	if error != nil {
+		errc := 500
+		err := "Some error happened while sending the message"
+		return ResultWithGetFile{ResultBase{false, &errc, &err}, nil}
+	}
+	var result ResultWithGetFile
+	json.Unmarshal([]byte(body), &result)
+	return result
+}
+
+func (bot TgBot) DownloadFilePathReader(path string) (io.ReadCloser, error) {
+	url := bot.buildFilePath(path)
+	resp, _, errq := gorequest.New().
+		DisableKeepAlives(true).
+		CloseRequest(true).
+		Get(url).
+		End()
+	if errq != nil {
+		if len(errq) > 0 {
+			return nil, errq[0]
+		} else {
+			return nil, errors.New("Error in GET petition")
+		}
+	}
+
+	return resp.Body, nil
 }

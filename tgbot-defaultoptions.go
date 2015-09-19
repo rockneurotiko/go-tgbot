@@ -10,6 +10,12 @@ type DefaultOptionsBot struct {
 	CleanInitialUsername       bool
 	AllowWithoutSlashInMention bool
 	LowerText                  bool
+	RecoverPanic               bool
+}
+
+func (bot *TgBot) SetRecoverPanic(b bool) *TgBot {
+	bot.DefaultOptions.RecoverPanic = b
+	return bot
 }
 
 func (bot *TgBot) SetLowerText(b bool) *TgBot {
