@@ -200,10 +200,12 @@ type ParseModeT int
 
 const (
 	Markdown ParseModeT = 1 + iota
+	Html
 )
 
 var parsemode = [...]string{
 	"Markdown",
+	"HTML",
 }
 
 func (pa ParseModeT) String() string {
