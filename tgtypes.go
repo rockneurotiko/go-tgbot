@@ -272,11 +272,32 @@ type ResultSetWebhook struct {
 
 // QuerySendMessage ...
 type QuerySendMessage struct {
-	ChatID                int             `json:"chat_id"`
+	ChatID                interface{}     `json:"chat_id"`
 	Text                  string          `json:"text"`
 	ParseMode             *string         `json:"parse_mode,omitempty"`
 	DisableWebPagePreview *bool           `json:"disable_web_page_preview,omitempty"`
 	ReplyToMessageID      *int            `json:"reply_to_message_id,omitempty"`
+	ReplyMarkup           *ReplyMarkupInt `json:"reply_markup,omitempty"`
+}
+
+// // QuerySendMessageUsername ...
+// type QuerySendMessageUsername struct {
+// 	ChatID                string          `json:"chat_id"`
+// 	Text                  string          `json:"text"`
+// 	ParseMode             *string         `json:"parse_mode,omitempty"`
+// 	DisableWebPagePreview *bool           `json:"disable_web_page_preview,omitempty"`
+// 	ReplyToMessageID      *int            `json:"reply_to_message_id,omitempty"`
+// 	ReplyMarkup           *ReplyMarkupInt `json:"reply_markup,omitempty"`
+// }
+
+// QueryEditMessage ...
+type QueryEditMessageText struct {
+	ChatID                interface{}     `json:"chat_id,omitempty"`
+	MessageID             *int            `json:"message_id,omitempty"`
+	InlineMessageID       *string         `json:"inline_message_id,omitempty"`
+	Text                  string          `json:"text"`
+	ParseMode             *string         `json:"parse_mode,omitempty"`
+	DisableWebPagePreview *bool           `json:"disable_web_page_preview,omitempty"`
 	ReplyMarkup           *ReplyMarkupInt `json:"reply_markup,omitempty"`
 }
 

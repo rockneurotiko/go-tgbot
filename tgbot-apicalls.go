@@ -164,8 +164,14 @@ func (bot TgBot) SendMessageWithKeyboardHide(cid int, text string, parsemode *Pa
 }
 
 // SendMessage full function wrapper for sendMessage, uses the markup interface
-func (bot TgBot) SendMessage(cid int, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm *ReplyMarkupInt) ResultWithMessage {
-	var pm *string = nil
+func (bot TgBot) SendMessage(cid interface{}, text string, parsemode *ParseModeT, dwp *bool, rtmid *int, rm *ReplyMarkupInt) ResultWithMessage {
+	switch cid.(type) {
+	case string, int:
+	default:
+		return ResultWithMessage{ResultBase{false, nil, nil}, nil}
+	}
+
+	var pm *string
 	if parsemode != nil {
 		pmt := parsemode.String()
 		pm = &pmt
@@ -673,4 +679,35 @@ func (bot TgBot) DownloadFilePathReader(path string) (io.ReadCloser, error) {
 	}
 
 	return resp.Body, nil
+}
+
+// Update 11/04/16
+
+// (bot TgBot) EditMessageText ...
+func (bot TgBot) EditMessageText(cid interface{}, mid *int, imi *string, text string, parsemode *ParseModeT, dwp *bool, rm *ReplyMarkupInt) ResultWithMessage {
+	if cid == nil && mid == nil && imi == nil {
+		return ResultWithMessage{ResultBase{false, nil, nil}, nil}
+	}
+
+	switch cid.(type) {
+	case string, int, nil:
+	default:
+		return ResultWithMessage{ResultBase{false, nil, nil}, nil}
+	}
+
+	var pm *string
+	if parsemode != nil {
+		pmt := parsemode.String()
+		pm = &pmt
+	}
+
+	payload := QueryEditMessageText{cid, mid, imi, text, pm, dwp, rm}
+	return bot.editMessageTextQuery(payload)
+}
+
+// editMessageTextQuery ...
+func (bot TgBot) editMessageTextQuery(payload QueryEditMessageText) ResultWithMessage {
+	url := bot.buildPath("editMessageText")
+	hookPayload(&payload, bot.DefaultOptions)
+	return bot.genericSendPostData(url, payload)
 }
