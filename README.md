@@ -42,6 +42,8 @@ func main() {
 
 You can see the code in [the echo example](https://github.com/rockneurotiko/go-tgbot/blob/master/example/echoexample/main.go)
 
+@buldo made an example of a bot deployed in heroku with webHook, you can see the example [here](https://github.com/buldo/echo-go-tg-bot)
+
 ## Installation
 
 As all the go libraries, you can install it with the `go get` tool:
