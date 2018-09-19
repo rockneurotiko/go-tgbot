@@ -1,6 +1,7 @@
 package tgbot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -234,13 +235,22 @@ func (bot TgBot) SendPhoto(cid int, photo interface{}, caption *string, rmi *int
 	return bot.SendPhotoQuery(payload)
 }
 
+func imageStringToPayload(cid int, caption *string, rmi *int, rm *ReplyMarkupInt, pars string) (payload interface{}) {
+	payload = SendPhotoIDQuery{cid, pars, caption, rmi, rm}
+	if looksLikePath(pars) {
+		payload = SendPhotoPathQuery{cid, pars, caption, rmi, rm}
+	}
+	return payload
+}
+
 func (bot TgBot) imageInterfaceToType(cid int, photo interface{}, caption *string, rmi *int, rm *ReplyMarkupInt) (payload interface{}, err error) {
 	switch pars := photo.(type) {
+	case []byte:
+		payload = imageStringToPayload(cid, caption, rmi, rm, string(pars))
+	case *bytes.Buffer:
+		payload = imageStringToPayload(cid, caption, rmi, rm, string(pars.Bytes()))
 	case string:
-		payload = SendPhotoIDQuery{cid, pars, caption, rmi, rm}
-		if looksLikePath(pars) {
-			payload = SendPhotoPathQuery{cid, pars, caption, rmi, rm}
-		}
+		payload = imageStringToPayload(cid, caption, rmi, rm, pars)
 	case image.Image:
 		mp := struct {
 			ChatID           int             `json:"chat_id"`
